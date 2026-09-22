@@ -30,6 +30,8 @@ actor GitStatusEngine {
   private var repos: [URL: Repo] = [:]
   private var refreshing: Set<URL> = []
   private var queued: Set<URL> = []
+  /// No usable git. Reported once; nothing runs again until `refreshAll()` (resume).
+  private var unavailable = false
 
   init(
     treeRoot: URL, options: FileTreeOptions, run: @escaping GitRunner,
@@ -48,11 +50,19 @@ actor GitStatusEngine {
   /// Finds the repo containing the tree root and loads it, nested repos included.
   /// Not a repo → nothing to color.
   func start() async {
+    guard (try? await run(["--version"], URL(filePath: "/"))) != nil else {
+      unavailable = true
+      await report(.gitUnavailable)
+      return
+    }
+    unavailable = false
     guard let top = await discover(treeRoot) else { return }
     await refresh(top)
   }
 
+  /// Also retries git from scratch if it was unavailable.
   func refreshAll() async {
+    if unavailable { return await start() }
     for root in repos.keys { await refresh(root) }
   }
 
@@ -87,7 +97,10 @@ actor GitStatusEngine {
 
   /// One refresh per repo in flight; asking again meanwhile queues exactly one more.
   func refresh(_ root: URL) async {
-    guard repos[root] != nil else { return }
+    // A deleted root is shown as missing; its repos would only fail.
+    guard repos[root] != nil, !unavailable,
+      FileManager.default.fileExists(atPath: treeRoot.path)
+    else { return }
     guard refreshing.insert(root).inserted else {
       queued.insert(root)
       return

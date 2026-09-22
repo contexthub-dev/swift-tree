@@ -34,7 +34,9 @@ private struct FileTreeRow: View {
           ForEach(tree.children(of: node.url)) { FileTreeRow(node: $0, tree: tree) }
         }
       } label: {
-        label(icon: tree.isExpanded(node.url) ? "folder.fill" : "folder")
+        label(
+          icon: tree.isExpanded(node.url) ? "folder.fill" : "folder",
+          branch: tree.branch(of: node.url))
       }
       .disclosureGroupStyle(PlainDisclosureStyle())
     } else {
@@ -46,10 +48,20 @@ private struct FileTreeRow: View {
     Binding(get: { tree.isExpanded(node.url) }, set: { tree.setExpanded(node.url, $0) })
   }
 
-  private func label(icon: String) -> some View {
-    Label(node.name, systemImage: icon)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .contentShape(Rectangle())
+  private func label(icon: String, branch: String? = nil) -> some View {
+    Label {
+      HStack(spacing: 6) {
+        Text(node.name)
+          .foregroundStyle(tree.status(of: node.url).flatMap(tree.options.colors.color) ?? .primary)
+        if let branch {
+          Text(branch).foregroundStyle(.secondary).font(.caption)
+        }
+      }
+    } icon: {
+      Image(systemName: icon)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .contentShape(Rectangle())
   }
 }
 

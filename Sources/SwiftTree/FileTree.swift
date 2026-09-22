@@ -6,6 +6,7 @@ import Observation
 @MainActor @Observable
 public final class FileTree {
   public let root: URL
+  public let options: FileTreeOptions
   /// Dot-named entries. Toggling re-filters what is already loaded; expansion is untouched.
   public var showHiddenFiles: Bool
   /// The root folder was deleted or moved away while watched.
@@ -55,6 +56,7 @@ public final class FileTree {
     onError: @escaping @MainActor (FileTreeError) -> Void = { _ in }
   ) {
     self.root = URL(filePath: root.standardizedFileURL.path, directoryHint: .notDirectory)
+    self.options = options
     self.showHiddenFiles = options.showHiddenFiles
     self.watcher = watcher
     self.lister = lister
@@ -95,6 +97,11 @@ public final class FileTree {
   public func status(of url: URL) -> GitStatus? {
     guard let repo = repoRoot(of: url) else { return nil }
     return StatusRollup.lookup(url, in: git.statuses, covering: git.covering, repoRoot: repo)
+  }
+
+  /// The branch (or short SHA when detached) of a repo-root folder, when `showBranchNames` is on.
+  public func branch(of url: URL) -> String? {
+    options.showBranchNames ? git.branches[url] : nil
   }
 
   /// The deepest repo holding `url`.

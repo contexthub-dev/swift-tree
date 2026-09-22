@@ -8,5 +8,7 @@ public struct FileTreeOptions: Sendable {
   public var showHiddenFiles = true
   /// Label each repo-root folder with its branch (or short SHA when detached).
   public var showBranchNames = false
+  /// Override any status color: `options.colors.modified = .orange`.
+  public var colors = StatusColors.zed
   public init() {}
 }

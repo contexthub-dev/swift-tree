@@ -22,6 +22,9 @@ enum Git {
   }
 
   static func runBlocking(_ args: [String], _ cwd: URL) throws -> Data {
+    if isCLTShimWithoutTools {
+      throw GitError(args: args, exitCode: -1, stderr: "Command Line Tools not installed")
+    }
     let process = Process()
     process.executableURL = URL(filePath: "/usr/bin/env")
     process.arguments = ["git", "-C", cwd.path] + args
@@ -43,4 +46,22 @@ enum Git {
     }
     return output
   }
+
+  /// `/usr/bin/git` is a stub that pops the "install Command Line Tools"
+  /// dialog when no developer tools are installed. Detect that without running it.
+  static let isCLTShimWithoutTools: Bool = {
+    let path = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin"
+    let git = path.split(separator: ":").lazy
+      .map { "\($0)/git" }
+      .first { FileManager.default.isExecutableFile(atPath: $0) }
+    guard git == "/usr/bin/git" else { return false }
+    let select = Process()
+    select.executableURL = URL(filePath: "/usr/bin/xcode-select")
+    select.arguments = ["-p"]
+    select.standardOutput = FileHandle.nullDevice
+    select.standardError = FileHandle.nullDevice
+    guard (try? select.run()) != nil else { return true }
+    select.waitUntilExit()
+    return select.terminationStatus != 0
+  }()
 }
