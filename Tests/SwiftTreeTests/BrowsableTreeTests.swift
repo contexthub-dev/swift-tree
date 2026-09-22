@@ -41,7 +41,7 @@ struct FileTreeBrowsingTests {
 
   /// A lister over a fixed layout that records every folder it reads.
   func tree(_ layout: [String: [TreeNode]], reads: OSAllocatedUnfairLock<[String]>) -> FileTree {
-    FileTree(root: root, options: .init()) { url in
+    FileTree(root: root, options: .init(), watcher: FakeWatcher()) { url in
       reads.withLock { $0.append(url.path) }
       return layout[url.path] ?? []
     }

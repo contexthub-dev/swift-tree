@@ -9,10 +9,16 @@ public struct FileTreeView: View {
   }
 
   public var body: some View {
-    List {
-      FileTreeRow(node: tree.rootNode, tree: tree)
+    if tree.rootMissing {
+      ContentUnavailableView(
+        "Folder Missing", systemImage: "questionmark.folder",
+        description: Text(tree.root.path))
+    } else {
+      List {
+        FileTreeRow(node: tree.rootNode, tree: tree)
+      }
+      .listStyle(.sidebar)
     }
-    .listStyle(.sidebar)
   }
 }
 

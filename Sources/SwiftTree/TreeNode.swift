@@ -42,4 +42,9 @@ extension URL {
   func child(_ relativePath: some StringProtocol) -> URL {
     appending(path: String(relativePath), directoryHint: .notDirectory)
   }
+
+  /// The containing folder, spelled the same way (no trailing slash).
+  var parent: URL {
+    URL(filePath: deletingLastPathComponent().path, directoryHint: .notDirectory)
+  }
 }

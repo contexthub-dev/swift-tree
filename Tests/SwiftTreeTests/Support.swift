@@ -27,3 +27,20 @@ final class TempDir {
     }
   }
 }
+
+/// A watcher the test drives by hand.
+final class FakeWatcher: FileWatching, @unchecked Sendable {
+  private(set) var watched: [[URL]] = []
+  private(set) var active = 0
+  private var onChange: (@Sendable (FileChangeBatch) -> Void)?
+
+  func watch(_ paths: [URL], onChange: @escaping @Sendable (FileChangeBatch) -> Void) -> WatchToken
+  {
+    watched.append(paths)
+    active += 1
+    self.onChange = onChange
+    return WatchToken { [weak self] in self?.active -= 1 }
+  }
+
+  func emit(_ batch: FileChangeBatch) { onChange?(batch) }
+}
