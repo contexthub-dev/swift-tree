@@ -10,6 +10,7 @@ let package = Package(
     .library(name: "SwiftTree", targets: ["SwiftTree"])
   ],
   targets: [
-    .target(name: "SwiftTree")
+    .target(name: "SwiftTree"),
+    .testTarget(name: "SwiftTreeTests", dependencies: ["SwiftTree"]),
   ]
 )
