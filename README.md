@@ -94,3 +94,14 @@ let all = try await tree.snapshot(of: root)  // [URL: GitStatus], incl. deleted 
 
 Paths outside the root, or any call with `detectGit = false`, throw
 `FileTreeError`.
+
+## Demo
+
+`demo/` is a small app for trying every option by hand: pick a folder, change
+settings and click Apply, pause and resume watching, and watch clicks, errors
+and status callbacks as they happen.
+
+```sh
+swift run --package-path demo                      # choose a folder in the app
+swift run --package-path demo SwiftTreeDemo -root ~/code/my-repo
+```
