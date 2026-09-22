@@ -55,6 +55,11 @@ final class DemoModel {
     }
   }
 
+  func togglePause() async {
+    guard let tree else { return }
+    if tree.isPaused { await tree.resume() } else { tree.pause() }
+  }
+
   /// Replacing `tree` releases the old one, whose watch tokens cancel on deinit.
   private func rebuild() {
     guard let root else { return }

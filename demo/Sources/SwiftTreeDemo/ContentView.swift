@@ -10,15 +10,18 @@ struct ContentView: View {
       SettingsForm(model: model)
         .navigationSplitViewColumnWidth(min: 240, ideal: 260)
     } detail: {
-      if let tree = model.tree {
-        FileTreeView(tree: tree)
-      } else {
-        ContentUnavailableView {
-          Label("No Folder", systemImage: "folder")
-        } actions: {
-          Button("Choose Folder…") { isPicking = true }
+      Group {
+        if let tree = model.tree {
+          FileTreeView(tree: tree)
+        } else {
+          ContentUnavailableView {
+            Label("No Folder", systemImage: "folder")
+          } actions: {
+            Button("Choose Folder…") { isPicking = true }
+          }
         }
       }
+      .safeAreaInset(edge: .bottom) { StatusBar(model: model) }
     }
     .frame(minWidth: 700, minHeight: 450)
     .navigationTitle(model.root?.path ?? "SwiftTree Demo")
@@ -28,6 +31,23 @@ struct ContentView: View {
     .fileImporter(isPresented: $isPicking, allowedContentTypes: [.folder]) { result in
       if case .success(let url) = result { model.open(url) }
     }
+  }
+}
+
+struct StatusBar: View {
+  let model: DemoModel
+
+  var body: some View {
+    HStack {
+      let isPaused = model.tree?.isPaused == true
+      Button(isPaused ? "Resume watching" : "Pause watching") {
+        Task { await model.togglePause() }
+      }
+      .disabled(model.tree == nil)
+      Spacer()
+    }
+    .padding(8)
+    .background(.bar)
   }
 }
 

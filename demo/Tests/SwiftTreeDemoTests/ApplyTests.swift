@@ -44,3 +44,15 @@ import Testing
     #expect(settings == DemoSettings())
   }
 }
+
+@MainActor struct PauseTests {
+  @Test func togglePauseFlipsTheTree() async throws {
+    let model = DemoModel()
+    model.open(FileManager.default.temporaryDirectory)
+    let tree = try #require(model.tree)
+    await model.togglePause()
+    #expect(tree.isPaused)
+    await model.togglePause()
+    #expect(!tree.isPaused)
+  }
+}
