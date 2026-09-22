@@ -24,6 +24,10 @@ Repo-specific facts. One per line, terse.
   (resolved `/private/var` spelling). FSEvents paths map back through `resolvedRoot`.
 - Nested-repo candidates = untracked AND ignored `dir/` entries holding `.git`, plus
   `.gitmodules` paths (a clean submodule never appears in status).
+- A replaced `FileTree` isn't freed at once: `register`'s first-snapshot Task holds it ~0.2s.
+  Tests that assert release must poll.
+- `register` with `detectGit = false` does NOT throw (the README says it does); it just never
+  calls back. Only `snapshot` throws `gitDetectionDisabled`.
 
 ## Testing seams
 - `FileTree(root:options:watcher:lister:git:onError:)` is the internal init: inject
@@ -31,3 +35,11 @@ Repo-specific facts. One per line, terse.
 - `await tree.started?.value` = first full git load done. Later async effects: `eventually { }`.
 - Simulate a git command: run it, then `watcher.emit` a path inside the repo's
   `--absolute-git-dir`, which is what FSEvents would report.
+
+## Demo app
+- `demo/` is its own SwiftPM package (path dep `..`), so consumers never resolve it. `make demo`
+  = build + test. Format paths list `demo/Package.swift demo/Sources demo/Tests`, never plain
+  `demo` (that would lint `demo/.build`).
+- `swift run --package-path demo SwiftTreeDemo -root <folder>` skips the picker. A bare path arg
+  opens no window (AppKit treats it as a file to open).
+- Apply rebuilds the `FileTree` (options are `let`); only `showHiddenFiles` applies live.
