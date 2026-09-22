@@ -84,6 +84,17 @@ struct GitStatusEngineTests {
     #expect(tree.repoRoot(of: lib.child("x.txt")) == lib)
   }
 
+  @Test func gitignoredRepoIsStillANestedRepo() async throws {
+    try dir.make("ignored/x.txt")
+    try git("init", "-q", in: root.child("ignored"))
+    try "ignored/\n".write(to: root.child(".gitignore"), atomically: true, encoding: .utf8)
+
+    let tree = await tree()
+
+    #expect(tree.repoRoot(of: root.child("ignored/x.txt")) == root.child("ignored"))
+    #expect(tree.status(of: root.child("ignored/x.txt")) == .untracked)
+  }
+
   @Test func detectGitOffRunsNoGit() async throws {
     let calls = OSAllocatedUnfairLock(initialState: 0)
     var options = FileTreeOptions()

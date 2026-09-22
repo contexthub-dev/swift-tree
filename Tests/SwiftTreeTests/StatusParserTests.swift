@@ -39,7 +39,7 @@ struct StatusParserTests {
         "a.log": .ignored,
         "node_modules/": .ignored,
       ])
-    #expect(status.nestedRepoCandidates == ["folder11/"])
+    #expect(status.nestedRepoCandidates == ["folder11/", "node_modules/"])
     #expect(status.branch == "main")
   }
 

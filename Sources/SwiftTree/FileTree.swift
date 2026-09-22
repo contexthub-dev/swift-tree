@@ -12,6 +12,8 @@ public final class FileTree {
   /// The root folder was deleted or moved away while watched.
   public private(set) var rootMissing = false
   public private(set) var isPaused = false
+  /// The last left-clicked row.
+  public private(set) var selection: URL?
 
   private var expanded: Set<URL>
   /// Loaded folder contents, unfiltered. Filled lazily by `children(of:)`, which
@@ -174,6 +176,27 @@ public final class FileTree {
       }
       if !diff.isEmpty { subscriber.callback(diff) }
     }
+  }
+
+  // MARK: Clicks
+
+  /// Selects the row; a folder also toggles open or closed.
+  func select(_ node: TreeNode) {
+    selection = node.url
+    if node.isDirectory { setExpanded(node.url, !isExpanded(node.url)) }
+  }
+
+  /// From what's already loaded and the last published status, so a click never waits on git.
+  public func info(for url: URL) -> TreeItemInfo {
+    let node = url == root ? rootNode : listings[url.parent]?.first { $0.url == url }
+    let repo = repoRoot(of: url)
+    return TreeItemInfo(
+      url: url,
+      relativePath: String(url.path.dropFirst(root.path.count).drop { $0 == "/" }),
+      isDirectory: node?.isDirectory ?? false,
+      isSymlink: node?.isSymlink ?? false,
+      repoRoot: repo,
+      gitStatus: repo == nil ? nil : status(of: url))
   }
 
   // MARK: Watching

@@ -7,7 +7,9 @@ struct PorcelainStatus: Equatable {
   var oid: String?
   /// Repo-relative paths; folders end in "/" (a nested repo, or an ignored folder).
   var entries: [String: GitStatus] = [:]
-  /// Untracked "dir/" entries. With `-uall` git reports a folder whole only when it's a nested repo.
+  /// "dir/" entries that may be nested repos: every untracked one (with `-uall`
+  /// git reports a folder whole only when it's a repo), plus ignored ones, since
+  /// a workspace repo commonly gitignores the repos checked out inside it.
   var nestedRepoCandidates: [String] = []
 }
 
@@ -39,7 +41,9 @@ enum StatusParser {
         result.entries[path] = .untracked
         if path.hasSuffix("/") { result.nestedRepoCandidates.append(path) }
       case "!":
-        result.entries[String(record.dropFirst(2))] = .ignored
+        let path = String(record.dropFirst(2))
+        result.entries[path] = .ignored
+        if path.hasSuffix("/") { result.nestedRepoCandidates.append(path) }
       default:
         continue
       }
