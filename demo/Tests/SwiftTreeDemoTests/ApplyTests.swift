@@ -18,14 +18,16 @@ import Testing
     #expect(!model.canApply)
   }
 
-  @Test func otherChangesRebuildAndReleaseTheOldTree() throws {
+  @Test func otherChangesRebuildAndReleaseTheOldTree() async throws {
     let model = DemoModel()
     model.open(root)
-    weak var old = model.tree
+    weak let old = model.tree
     model.draft.modified = .purple
     model.draft.showHiddenFiles = false
     model.apply()
     #expect(model.tree != nil && model.tree !== old)
+    // register's first-snapshot Task holds the old tree briefly; it must still go away.
+    for _ in 0..<100 where old != nil { try await Task.sleep(for: .milliseconds(20)) }
     #expect(old == nil)
     #expect(model.tree?.showHiddenFiles == false)
   }
@@ -54,5 +56,23 @@ import Testing
     #expect(tree.isPaused)
     await model.togglePause()
     #expect(!tree.isPaused)
+  }
+}
+
+@MainActor struct LogTests {
+  @Test func logKeepsTheNewest200Lines() {
+    let model = DemoModel()
+    for i in 0..<250 { model.append("\(i)") }
+    #expect(model.log.count == 200)
+    #expect(model.log.first == "50" && model.log.last == "249")
+  }
+
+  @Test func rebuildClearsTheLog() {
+    let model = DemoModel()
+    model.open(FileManager.default.temporaryDirectory)
+    model.append("old")
+    model.draft.showBranchNames = true
+    model.apply()
+    #expect(model.log.isEmpty)
   }
 }

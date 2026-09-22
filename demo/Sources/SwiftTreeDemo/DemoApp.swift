@@ -36,6 +36,11 @@ final class DemoModel {
   private(set) var tree: FileTree?
   var draft = DemoSettings()
   private(set) var applied = DemoSettings()
+  private(set) var lastClicked: TreeItemInfo?
+  private(set) var lastError: (error: FileTreeError, at: Date)?
+  /// One line per status callback, newest last.
+  private(set) var log: [String] = []
+  private var subscription: StatusSubscription?
 
   var canApply: Bool { tree != nil && draft != applied && draft.isLatencyValid }
 
@@ -60,10 +65,27 @@ final class DemoModel {
     if tree.isPaused { await tree.resume() } else { tree.pause() }
   }
 
+  func clicked(_ item: TreeItemInfo) { lastClicked = item }
+
+  func append(_ line: String) {
+    log.append(line)
+    log.removeFirst(max(0, log.count - 200))
+  }
+
   /// Replacing `tree` releases the old one, whose watch tokens cancel on deinit.
   private func rebuild() {
     guard let root else { return }
-    tree = FileTree(
-      root: root, options: applied.options, watcher: FSEventsWatcher(latency: applied.latency))
+    if let subscription { tree?.unregister(subscription) }
+    (subscription, lastClicked, lastError, log) = (nil, nil, nil, [])
+    let tree = FileTree(
+      root: root, options: applied.options, watcher: FSEventsWatcher(latency: applied.latency),
+      onError: { [weak self] in self?.lastError = ($0, .now) })
+    self.tree = tree
+    // With git off, register succeeds but never calls back.
+    guard applied.detectGit else { return }
+    subscription = try? tree.register(path: tree.root) { [weak self] statuses in
+      let time = Date.now.formatted(date: .omitted, time: .standard)
+      self?.append("\(time)  \(statuses.count) entries")
+    }
   }
 }

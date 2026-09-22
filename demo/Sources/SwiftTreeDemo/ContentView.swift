@@ -12,7 +12,15 @@ struct ContentView: View {
     } detail: {
       Group {
         if let tree = model.tree {
-          FileTreeView(tree: tree)
+          FileTreeView(tree: tree, onLeftClick: model.clicked) { item in
+            Button("Reveal in Finder") {
+              NSWorkspace.shared.activateFileViewerSelecting([item.url])
+            }
+            Button("Copy Relative Path") {
+              NSPasteboard.general.clearContents()
+              NSPasteboard.general.setString(item.relativePath, forType: .string)
+            }
+          }
         } else {
           ContentUnavailableView {
             Label("No Folder", systemImage: "folder")
@@ -21,7 +29,11 @@ struct ContentView: View {
           }
         }
       }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
       .safeAreaInset(edge: .bottom) { StatusBar(model: model) }
+      .inspector(isPresented: .constant(true)) {
+        InspectorView(model: model).inspectorColumnWidth(min: 260, ideal: 300)
+      }
     }
     .frame(minWidth: 700, minHeight: 450)
     .navigationTitle(model.root?.path ?? "SwiftTree Demo")
@@ -45,9 +57,42 @@ struct StatusBar: View {
       }
       .disabled(model.tree == nil)
       Spacer()
+      if let (error, at) = model.lastError {
+        Text("\(at.formatted(date: .omitted, time: .standard))  \(String(describing: error))")
+          .foregroundStyle(.red)
+          .lineLimit(1)
+          .truncationMode(.middle)
+          .help(String(describing: error))
+      }
     }
     .padding(8)
     .background(.bar)
+  }
+}
+
+struct InspectorView: View {
+  let model: DemoModel
+
+  var body: some View {
+    Form {
+      Section("Last clicked") {
+        if let item = model.lastClicked {
+          LabeledContent("Path", value: item.url.path)
+          LabeledContent("Relative", value: item.relativePath)
+          LabeledContent("Kind", value: item.isDirectory ? "Folder" : "File")
+          LabeledContent("Symlink", value: item.isSymlink ? "Yes" : "No")
+          LabeledContent("Repo root", value: item.repoRoot?.path ?? "none")
+          LabeledContent("Git status", value: item.gitStatus.map { "\($0)" } ?? "none")
+        } else {
+          Text("Click a row").foregroundStyle(.secondary)
+        }
+      }
+      Section("Status callbacks (\(model.log.count))") {
+        ForEach(Array(model.log.enumerated().reversed()), id: \.offset) { Text($0.element) }
+      }
+    }
+    .formStyle(.grouped)
+    .textSelection(.enabled)
   }
 }
 
