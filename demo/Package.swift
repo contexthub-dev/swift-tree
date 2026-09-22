@@ -9,6 +9,7 @@ let package = Package(
   targets: [
     .executableTarget(
       name: "SwiftTreeDemo",
-      dependencies: [.product(name: "SwiftTree", package: "swift-tree")])
+      dependencies: [.product(name: "SwiftTree", package: "swift-tree")]),
+    .testTarget(name: "SwiftTreeDemoTests", dependencies: ["SwiftTreeDemo"]),
   ]
 )

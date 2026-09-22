@@ -34,15 +34,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 final class DemoModel {
   private(set) var root: URL?
   private(set) var tree: FileTree?
+  var draft = DemoSettings()
+  private(set) var applied = DemoSettings()
+
+  var canApply: Bool { tree != nil && draft != applied && draft.isLatencyValid }
 
   func open(_ url: URL) {
     root = url
     rebuild()
   }
 
+  func apply() {
+    guard canApply else { return }
+    let hiddenOnly = draft.differsOnlyInHiddenFiles(from: applied)
+    applied = draft
+    if hiddenOnly {
+      tree?.showHiddenFiles = applied.showHiddenFiles
+    } else {
+      rebuild()
+    }
+  }
+
   /// Replacing `tree` releases the old one, whose watch tokens cancel on deinit.
   private func rebuild() {
     guard let root else { return }
-    tree = FileTree(root: root)
+    tree = FileTree(
+      root: root, options: applied.options, watcher: FSEventsWatcher(latency: applied.latency))
   }
 }
