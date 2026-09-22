@@ -1,8 +1,8 @@
 # The only place these commands are written. The workflows call these targets,
 # so a contributor's local run is byte-identical to the CI gate.
-SWIFT_FORMAT_PATHS := Package.swift Sources Tests
+SWIFT_FORMAT_PATHS := Package.swift Sources Tests demo/Package.swift demo/Sources
 
-.PHONY: format-check format build test
+.PHONY: format-check format build test demo
 
 ## Report violations as file:line:col: error: [Rule]. Non-zero exit if any.
 format-check:
@@ -17,3 +17,7 @@ build:
 
 test:
 	swift test
+
+## Build the demo app (run it with `swift run --package-path demo`).
+demo:
+	swift build --package-path demo
