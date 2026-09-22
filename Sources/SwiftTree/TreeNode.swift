@@ -47,4 +47,9 @@ extension URL {
   var parent: URL {
     URL(filePath: deletingLastPathComponent().path, directoryHint: .notDirectory)
   }
+
+  /// This path or anything beneath it. Compares whole components, so `/a/foo` doesn't enclose `/a/foobar`.
+  func encloses(_ other: URL) -> Bool {
+    other.path == path || other.path.hasPrefix(path == "/" ? "/" : path + "/")
+  }
 }
