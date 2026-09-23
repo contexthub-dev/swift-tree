@@ -7,8 +7,12 @@ Repo-specific facts. One per line, terse.
   calls the targets. Stock `swift format` defaults (2-space) — no `.swift-format` on purpose.
 - Tests: Swift Testing (`import Testing`), hermetic, ~2s. They shell out to the REAL git in temp
   dirs; git on PATH is a test prerequisite.
-- Release = bare semver tag (`0.1.0`, no `v`). CI's release job fires on it and only adds notes;
-  SwiftPM resolves the tag itself.
+- Release = bare semver tag (`0.2.0`, no `v`), cut ONLY by `release.yml` (Actions → Release → run
+  with `version`). It commits the devicon font on a detached release commit on top of main and pushes
+  just the tag. Never push a tag by hand: it would ship without the font. `ci.yml` has no tag trigger.
+- `make fonts` fetches the latest devicon (TTF, license, map from its CSS) into
+  `Sources/SwiftTree/Resources/DevIcons/`. Gitignored except README.md, which must stay committed:
+  SwiftPM fails the build if a declared `.copy` resource folder is missing.
 - Package targets macOS 14: `Mutex` (Synchronization) is macOS 15 — use `OSAllocatedUnfairLock`.
 - A SwiftPM test target with no sources fails the build; add the target with its first test.
 
@@ -28,6 +32,14 @@ Repo-specific facts. One per line, terse.
   Tests that assert release must poll.
 - `register` with `detectGit = false` does NOT throw (the README says it does); it just never
   calls back. Only `snapshot` throws `gitDetectionDisabled`.
+
+- DevIcons: public `FileTree` init passes `DevIcons.shared` (when `useDevIcons`); the internal init
+  defaults `devIcons: nil`, so every existing test is hermetic with or without the font. The one
+  real-font test is `.enabled(if:)` the bundled TTF exists (skipped locally until `make fonts`).
+- devicon's minified CSS holds glyphs as LITERAL private-use chars (not `\e…`) and groups selectors
+  (`.a:before,.b:before{…}`): v2.17.0 = 1,491 names. `less` and `toml` have no icon. Table entries
+  were checked against the map; re-check when adding one.
+- `swift scripts/x.swift` (script mode) rejects bare `/regex/` literals; use `#/…/#`.
 
 ## Testing seams
 - `FileTree(root:options:watcher:lister:git:onError:)` is the internal init: inject
