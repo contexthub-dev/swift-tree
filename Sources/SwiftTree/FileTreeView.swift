@@ -81,7 +81,8 @@ private struct FileTreeRow<RightClickMenu: View>: View {
 
   var body: some View {
     HStack(spacing: 0) {
-      Color.clear.frame(width: CGFloat(row.depth) * metrics.indent)
+      IndentGuides(
+        depth: row.depth, metrics: metrics, isVisible: tree.options.showIndentGuides)
       Image(systemName: icon)
         .frame(width: metrics.iconWidth)
       Text(node.name)
@@ -112,5 +113,28 @@ private struct FileTreeRow<RightClickMenu: View>: View {
   private var icon: String {
     if node.isDirectory { return tree.isExpanded(node.url) ? "folder.fill" : "folder" }
     return node.isSymlink ? "link" : "doc"
+  }
+}
+
+/// One 1pt line per ancestor level, centered under that ancestor's icon. Each
+/// segment fills the full row height, so the rows' segments join into one line
+/// that ends at the folder's last visible descendant. Invisible guides still
+/// take their width, so turning them off never shifts the layout.
+private struct IndentGuides: View {
+  let depth: Int
+  let metrics: RowMetrics
+  let isVisible: Bool
+
+  var body: some View {
+    Canvas { context, size in
+      guard isVisible else { return }
+      for level in 0..<depth {
+        let x = CGFloat(level) * metrics.indent + metrics.iconWidth / 2
+        context.fill(
+          Path(CGRect(x: x - 0.5, y: 0, width: 1, height: size.height)),
+          with: .color(.primary.opacity(0.15)))
+      }
+    }
+    .frame(width: CGFloat(depth) * metrics.indent)
   }
 }
