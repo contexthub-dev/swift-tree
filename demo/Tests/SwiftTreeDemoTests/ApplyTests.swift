@@ -40,6 +40,19 @@ import Testing
     #expect(!model.canApply)
   }
 
+  @Test func devIconsToggleRebuildsWithIt() throws {
+    let model = DemoModel()
+    model.open(root)
+    let tree = try #require(model.tree)
+    #expect(tree.options.useDevIcons)
+
+    model.draft.useDevIcons = false
+    model.apply()
+
+    #expect(model.tree !== tree)
+    #expect(model.tree?.options.useDevIcons == false)
+  }
+
   @Test func resetColorsRestoresZed() {
     var settings = DemoSettings()
     settings.deleted = .purple

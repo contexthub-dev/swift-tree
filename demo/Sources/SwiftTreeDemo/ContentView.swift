@@ -132,6 +132,7 @@ struct SettingsForm: View {
             get: { model.draft.theme == .dark },
             set: { model.draft.theme = $0 ? .dark : .light }))
         Toggle("Show indent guides", isOn: $model.draft.showIndentGuides)
+        Toggle("Use DevIcons", isOn: $model.draft.useDevIcons)
         Stepper(
           "Font size: \(Int(model.draft.fontSize)) pt", value: $model.draft.fontSize, in: 8...32)
       }

@@ -64,6 +64,7 @@ options.showIndentGuides = true                 // vertical lines beside open fo
 options.fontSize = 12                           // 8-32; row height and indent scale with it
 options.colors.modified = .orange               // override any status color
 options.colors = StatusColors(all: .orange)     // one color for every change; ignored stays gray
+options.useDevIcons = true                      // devicon file-type glyphs; false: generic doc icon
 
 let tree = FileTree(root: root, options: options)
 ```

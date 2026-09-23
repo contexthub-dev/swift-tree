@@ -11,6 +11,7 @@ struct DemoSettings: Equatable {
   var theme = ColorScheme.dark
   var showIndentGuides = true
   var fontSize: CGFloat = 12
+  var useDevIcons = true
   var useSingleColor = false
   var singleColor = StatusColors.zed.modified
   var modified = StatusColors.zed.modified
@@ -31,6 +32,7 @@ struct DemoSettings: Equatable {
     options.theme = theme
     options.showIndentGuides = showIndentGuides
     options.fontSize = fontSize
+    options.useDevIcons = useDevIcons
     options.colors =
       useSingleColor
       ? StatusColors(all: singleColor)
