@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A sidebar list of the tree, rooted at `tree.root`, which starts expanded.
+/// The tree rooted at `tree.root`, which starts expanded, as flat compact rows.
 ///
 /// A left click selects the row (and toggles a folder), then calls `onLeftClick`.
 /// A right click or control-click shows the menu `rightClickMenu` builds for
@@ -24,16 +24,23 @@ public struct FileTreeView<RightClickMenu: View>: View {
     content.environment(\.colorScheme, tree.options.theme)
   }
 
+  /// A `LazyVStack`, not a `List`: the AppKit table under a macOS `List` adds row
+  /// insets and a minimum height that break compact, gap-free rows.
   @ViewBuilder private var content: some View {
     if tree.rootMissing {
       ContentUnavailableView(
         "Folder Missing", systemImage: "questionmark.folder",
         description: Text(tree.root.path))
     } else {
-      List {
-        FileTreeRow(node: tree.rootNode, view: self)
+      let metrics = RowMetrics(fontSize: tree.options.fontSize)
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 0) {
+          ForEach(tree.visibleRows()) { FileTreeRow(row: $0, metrics: metrics, view: self) }
+        }
+        .padding(.vertical, 4)
       }
-      .listStyle(.sidebar)
+      // Painted, so the chosen theme holds even when the host's appearance differs.
+      .background(.background)
     }
   }
 }
@@ -44,72 +51,66 @@ extension FileTreeView where RightClickMenu == EmptyView {
   }
 }
 
-private struct FileTreeRow<RightClickMenu: View>: View {
+/// A row on screen and how deep it sits; the root is depth 0.
+struct VisibleRow: Identifiable, Equatable {
   let node: TreeNode
+  let depth: Int
+  var id: URL { node.url }
+}
+
+/// Row geometry from the font size. The ratios are tuned against Zed's look
+/// (12pt → 20pt rows, 16pt indent); change them here, nowhere else.
+struct RowMetrics: Equatable {
+  let fontSize, rowHeight, indent, iconWidth, branchFontSize: CGFloat
+
+  init(fontSize: CGFloat) {
+    self.fontSize = fontSize
+    rowHeight = (fontSize * 5 / 3).rounded()
+    indent = (fontSize * 4 / 3).rounded()
+    iconWidth = indent
+    branchFontSize = (fontSize * 0.85).rounded()
+  }
+}
+
+private struct FileTreeRow<RightClickMenu: View>: View {
+  let row: VisibleRow
+  let metrics: RowMetrics
   let view: FileTreeView<RightClickMenu>
   var tree: FileTree { view.tree }
+  var node: TreeNode { row.node }
 
   var body: some View {
-    if node.isDirectory {
-      DisclosureGroup(isExpanded: isExpanded) {
-        // Guarded so a collapsed folder's children are never listed.
-        if tree.isExpanded(node.url) {
-          ForEach(tree.children(of: node.url)) { FileTreeRow(node: $0, view: view) }
-        }
-      } label: {
-        label(
-          icon: tree.isExpanded(node.url) ? "folder.fill" : "folder",
-          branch: tree.branch(of: node.url))
-      }
-      .disclosureGroupStyle(PlainDisclosureStyle())
-    } else {
-      label(icon: node.isSymlink ? "link" : "doc")
-    }
-  }
-
-  private var isExpanded: Binding<Bool> {
-    Binding(get: { tree.isExpanded(node.url) }, set: { tree.setExpanded(node.url, $0) })
-  }
-
-  /// The click targets sit on the label, not the DisclosureGroup: on the group
-  /// they would also claim clicks on every child row.
-  private func label(icon: String, branch: String? = nil) -> some View {
-    Label {
-      HStack(spacing: 6) {
-        Text(node.name)
-          .foregroundStyle(tree.status(of: node.url).flatMap(tree.options.colors.color) ?? .primary)
-        if let branch {
-          Text(branch).foregroundStyle(.secondary).font(.caption)
-        }
-      }
-    } icon: {
+    HStack(spacing: 0) {
+      Color.clear.frame(width: CGFloat(row.depth) * metrics.indent)
       Image(systemName: icon)
+        .frame(width: metrics.iconWidth)
+      Text(node.name)
+        .foregroundStyle(tree.status(of: node.url).flatMap(tree.options.colors.color) ?? .primary)
+        .padding(.leading, metrics.indent / 4)
+      if let branch = tree.branch(of: node.url) {
+        Text(branch)
+          .font(.system(size: metrics.branchFontSize))
+          .foregroundStyle(.secondary)
+          .padding(.leading, metrics.indent / 2)
+      }
+      Spacer(minLength: 0)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
+    .font(.system(size: metrics.fontSize))
+    .lineLimit(1)
+    .padding(.horizontal, metrics.indent / 2)
+    .frame(height: metrics.rowHeight)
+    .background(tree.selection == node.url ? Color.accentColor.opacity(0.18) : Color.clear)
     .contentShape(Rectangle())
     .onTapGesture {
       tree.select(node)
       view.onLeftClick(tree.info(for: node.url))
     }
     .contextMenu { view.rightClickMenu(tree.info(for: node.url)) }
-    .listRowBackground(tree.selection == node.url ? Color.accentColor.opacity(0.18) : Color.clear)
   }
-}
 
-/// A `DisclosureGroup` without a chevron; the row's own tap toggles it. SF
-/// Symbols has no open-folder glyph, so the filled folder icon marks an open
-/// one. `Group` is transparent to `List`: label and children stay separate
-/// rows, and the content's leading padding supplies the indent.
-private struct PlainDisclosureStyle: DisclosureGroupStyle {
-  static let indent: CGFloat = 12
-
-  func makeBody(configuration: Configuration) -> some View {
-    Group {
-      configuration.label
-      if configuration.isExpanded {
-        configuration.content
-          .padding(.leading, Self.indent)
-      }
-    }
+  /// SF Symbols has no open-folder glyph, so the filled folder marks an open one.
+  private var icon: String {
+    if node.isDirectory { return tree.isExpanded(node.url) ? "folder.fill" : "folder" }
+    return node.isSymlink ? "link" : "doc"
   }
 }

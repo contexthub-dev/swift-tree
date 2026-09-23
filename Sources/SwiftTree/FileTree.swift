@@ -89,6 +89,19 @@ public final class FileTree {
 
   public func isExpanded(_ url: URL) -> Bool { expanded.contains(url) }
 
+  /// The rows on screen, top to bottom: the root, then every expanded folder's
+  /// children (filtered by `showHiddenFiles`), depth-first. Collapsed folders are never read.
+  func visibleRows() -> [VisibleRow] {
+    var rows: [VisibleRow] = []
+    func walk(_ node: TreeNode, depth: Int) {
+      rows.append(VisibleRow(node: node, depth: depth))
+      guard node.isDirectory, isExpanded(node.url) else { return }
+      for child in children(of: node.url) { walk(child, depth: depth + 1) }
+    }
+    walk(rootNode, depth: 0)
+    return rows
+  }
+
   public func setExpanded(_ url: URL, _ isExpanded: Bool) {
     if isExpanded { expanded.insert(url) } else { expanded.remove(url) }
   }
