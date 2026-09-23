@@ -85,10 +85,10 @@ public final class FileTree {
   }
 
   /// The folder's entries, read from disk on the first call only. A folder
-  /// that is never asked for is never read.
+  /// that is never asked for is never read. `.DS_Store` is never shown.
   public func children(of url: URL) -> [TreeNode] {
     _ = listingVersion
-    let all = listings[url] ?? load(url)
+    let all = (listings[url] ?? load(url)).filter { $0.name != ".DS_Store" }
     return showHiddenFiles ? all : all.filter { !$0.name.hasPrefix(".") }
   }
 

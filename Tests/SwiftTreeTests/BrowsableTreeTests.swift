@@ -78,6 +78,14 @@ struct FileTreeBrowsingTests {
     #expect(tree.isExpanded(root.child("src")))
     #expect(reads.withLock { $0 } == ["/r"])
   }
+
+  @Test func dsStoreIsNeverShown() {
+    let tree = tree(
+      ["/r": [node("/r/.DS_Store"), node("/r/.env")]], reads: .init(initialState: []))
+    #expect(tree.children(of: root).map(\.name) == [".env"])
+    tree.showHiddenFiles = false
+    #expect(tree.children(of: root).isEmpty)
+  }
 }
 
 @MainActor

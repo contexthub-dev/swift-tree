@@ -89,7 +89,7 @@ let tree = FileTree(root: root, options: options)
 |--------|---------|--------|
 | `detectGit` | `true` | `false`: no status colors, no branch labels, and no git command ever runs. |
 | `canHaveMultipleGitRepositories` | `true` | `false`: nested repos are ignored; everything resolves against the repo containing the root. |
-| `showHiddenFiles` | `true` | Initial value of `tree.showHiddenFiles` (dot-named entries). |
+| `showHiddenFiles` | `true` | Initial value of `tree.showHiddenFiles` (dot-named entries; `.DS_Store` is never shown). |
 | `showBranchNames` | `false` | Label each repo-root folder with its branch, or the short SHA when HEAD is detached. |
 | `theme` | `.dark` | `.light` or `.dark` for the tree only, independent of the system and the host window. |
 | `showIndentGuides` | `true` | A vertical line beside the contents of each open folder. |
