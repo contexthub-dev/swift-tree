@@ -8,6 +8,7 @@ struct DemoSettings: Equatable {
   var canHaveMultipleGitRepositories = true
   var showHiddenFiles = true
   var showBranchNames = false
+  var theme = ColorScheme.dark
   var modified = StatusColors.zed.modified
   var untracked = StatusColors.zed.untracked
   var staged = StatusColors.zed.staged
@@ -23,6 +24,7 @@ struct DemoSettings: Equatable {
     options.canHaveMultipleGitRepositories = canHaveMultipleGitRepositories
     options.showHiddenFiles = showHiddenFiles
     options.showBranchNames = showBranchNames
+    options.theme = theme
     options.colors = StatusColors(
       modified: modified, untracked: untracked, staged: staged, deleted: deleted, ignored: ignored)
     return options

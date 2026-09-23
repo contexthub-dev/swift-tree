@@ -43,3 +43,6 @@ Repo-specific facts. One per line, terse.
 - `swift run --package-path demo SwiftTreeDemo -root <folder>` skips the picker. A bare path arg
   opens no window (AppKit treats it as a file to open).
 - Apply rebuilds the `FileTree` (options are `let`); only `showHiddenFiles` applies live.
+- `options.theme` (a SwiftUI `ColorScheme`, default `.dark`) is applied by `FileTreeView` via
+  `.environment(\.colorScheme)`, scoped to the tree. Never `.preferredColorScheme` in the library:
+  that changes the host's window. Default dark changed 0.1.0's follow-the-system look.

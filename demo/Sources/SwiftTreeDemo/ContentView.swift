@@ -5,11 +5,11 @@ struct ContentView: View {
   @Bindable var model: DemoModel
   @State private var isPicking = false
 
+  /// Standard macOS layout: navigator in the sidebar, settings in the content
+  /// area (controls on the translucent sidebar lose their accent color), and
+  /// details in the inspector.
   var body: some View {
     NavigationSplitView {
-      SettingsForm(model: model)
-        .navigationSplitViewColumnWidth(min: 240, ideal: 260)
-    } detail: {
       Group {
         if let tree = model.tree {
           FileTreeView(tree: tree, onLeftClick: model.clicked) { item in
@@ -29,16 +29,30 @@ struct ContentView: View {
           }
         }
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .safeAreaInset(edge: .bottom) { StatusBar(model: model) }
-      .inspector(isPresented: .constant(true)) {
-        InspectorView(model: model).inspectorColumnWidth(min: 260, ideal: 300)
-      }
+      .navigationSplitViewColumnWidth(min: 220, ideal: 280)
+    } detail: {
+      SettingsForm(model: model)
+        .safeAreaInset(edge: .bottom) { FooterBar(model: model) }
+        .inspector(isPresented: .constant(true)) {
+          InspectorView(model: model).inspectorColumnWidth(min: 260, ideal: 300)
+        }
     }
-    .frame(minWidth: 700, minHeight: 450)
-    .navigationTitle(model.root?.path ?? "SwiftTree Demo")
+    .frame(minWidth: 900, minHeight: 500)
+    // The tree themes itself; the rest of the window follows so the two match.
+    .preferredColorScheme(model.applied.theme)
+    .navigationTitle(model.root?.lastPathComponent ?? "SwiftTree Demo")
+    .navigationSubtitle(model.root?.path ?? "")
     .toolbar {
       Button("Choose Folder…", systemImage: "folder") { isPicking = true }
+      let isPaused = model.tree?.isPaused == true
+      Button(
+        isPaused ? "Resume Watching" : "Pause Watching",
+        systemImage: isPaused ? "play.fill" : "pause.fill"
+      ) {
+        Task { await model.togglePause() }
+      }
+      .help(isPaused ? "Resume watching for file changes" : "Pause watching for file changes")
+      .disabled(model.tree == nil)
     }
     .fileImporter(isPresented: $isPicking, allowedContentTypes: [.folder]) { result in
       if case .success(let url) = result { model.open(url) }
@@ -46,26 +60,32 @@ struct ContentView: View {
   }
 }
 
-struct StatusBar: View {
+/// Watch state or the last error on the left, the default button on the right,
+/// like a macOS sheet footer.
+struct FooterBar: View {
   let model: DemoModel
 
   var body: some View {
     HStack {
-      let isPaused = model.tree?.isPaused == true
-      Button(isPaused ? "Resume watching" : "Pause watching") {
-        Task { await model.togglePause() }
-      }
-      .disabled(model.tree == nil)
-      Spacer()
       if let (error, at) = model.lastError {
-        Text("\(at.formatted(date: .omitted, time: .standard))  \(String(describing: error))")
-          .foregroundStyle(.red)
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .help(String(describing: error))
+        Label(
+          "\(at.formatted(date: .omitted, time: .standard))  \(String(describing: error))",
+          systemImage: "exclamationmark.triangle.fill"
+        )
+        .foregroundStyle(.red)
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .help(String(describing: error))
+      } else if let tree = model.tree {
+        Text(tree.isPaused ? "Watching paused" : "Watching for changes")
+          .foregroundStyle(.secondary)
       }
+      Spacer()
+      Button("Apply") { model.apply() }
+        .keyboardShortcut(.defaultAction)
+        .disabled(!model.canApply)
     }
-    .padding(8)
+    .padding(12)
     .background(.bar)
   }
 }
@@ -106,6 +126,11 @@ struct SettingsForm: View {
         Toggle("Detect git", isOn: $model.draft.detectGit)
         Toggle("Multiple git repositories", isOn: $model.draft.canHaveMultipleGitRepositories)
         Toggle("Show branch names", isOn: $model.draft.showBranchNames)
+        Toggle(
+          "Dark theme",
+          isOn: Binding(
+            get: { model.draft.theme == .dark },
+            set: { model.draft.theme = $0 ? .dark : .light }))
       }
       Section("Colors") {
         ColorPicker("Modified", selection: $model.draft.modified)
@@ -123,14 +148,5 @@ struct SettingsForm: View {
       }
     }
     .formStyle(.grouped)
-    // Pinned below the form so it never scrolls out of reach.
-    .safeAreaInset(edge: .bottom) {
-      Button("Apply") { model.apply() }
-        .keyboardShortcut(.defaultAction)
-        .disabled(!model.canApply)
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(.bar)
-    }
   }
 }
