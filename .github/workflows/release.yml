@@ -1,0 +1,69 @@
+name: Release
+
+# The only way to publish a release. The tag points at a release-only commit
+# that adds the devicon font on top of main; main itself never carries it, and
+# SwiftPM consumers get the font because they resolve the tag.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to tag, bare semver without a "v" (e.g. 0.3.0)
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0  # all tags, for the already-exists check
+
+      - name: Check version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must be X.Y.Z, got '$VERSION'"; exit 1; }
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then echo "tag $VERSION already exists"; exit 1; fi
+
+      - name: Fetch devicon font
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: make fonts
+
+      - name: Test
+        run: make test
+
+      - name: Build and test demo
+        run: make demo-test
+
+      # A tag pushed with the workflow token triggers no other workflow, so this
+      # job tests and publishes on its own. Only the tag is pushed, never main.
+      - name: Commit font and push tag
+        id: tag
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          devicon=$(cat Sources/SwiftTree/Resources/DevIcons/VERSION)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --detach
+          git add -f Sources/SwiftTree/Resources/DevIcons
+          git commit -m "Release $VERSION (devicon $devicon)"
+          git tag "$VERSION"
+          git push origin "refs/tags/$VERSION"
+          echo "devicon=$devicon" >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          generate_release_notes: true
+          body: |
+            Bundles devicon ${{ steps.tag.outputs.devicon }} (MIT; license in `Sources/SwiftTree/Resources/DevIcons/LICENSE-devicon`).

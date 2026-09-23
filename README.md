@@ -109,3 +109,22 @@ and status callbacks as they happen.
 make demo                   # choose a folder in the app
 make demo ROOT=~/code/my-repo
 ```
+
+## Developing and releasing
+
+File-type icons come from [devicon](https://github.com/devicons/devicon) (MIT).
+Its font isn't committed to `main`. Fetch the latest release before building:
+
+```sh
+make fonts    # downloads into Sources/SwiftTree/Resources/DevIcons (gitignored)
+make test
+```
+
+Without it everything still builds, but file rows show the generic `doc` icon
+and `FileTree` reports `.devIconsUnavailable` once. CI runs `make fonts` first.
+
+Releases come only from the **Release** workflow (Actions → Release → Run
+workflow, enter `X.Y.Z`). It fetches the latest devicon, runs the tests, commits
+the font on a release-only commit on top of `main`, and pushes just the tag.
+So each tag carries its font, and `main` never does. Don't push tags by hand:
+the tag would have no font.
