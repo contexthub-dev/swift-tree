@@ -21,6 +21,10 @@ public struct FileTreeView<RightClickMenu: View>: View {
   }
 
   public var body: some View {
+    content.environment(\.colorScheme, tree.options.theme)
+  }
+
+  @ViewBuilder private var content: some View {
     if tree.rootMissing {
       ContentUnavailableView(
         "Folder Missing", systemImage: "questionmark.folder",

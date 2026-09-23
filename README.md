@@ -59,6 +59,7 @@ options.detectGit = true                        // false: no colors, no git call
 options.canHaveMultipleGitRepositories = true   // false: ignore nested repos
 options.showHiddenFiles = true                  // toggle later via tree.showHiddenFiles
 options.showBranchNames = false                 // label repo-root folders with their branch
+options.theme = .dark                           // .light or .dark, regardless of system appearance
 options.colors.modified = .orange               // override any status color
 
 let tree = FileTree(root: root, options: options)
