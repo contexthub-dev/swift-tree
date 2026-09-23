@@ -23,6 +23,8 @@ public final class FileTree {
   @ObservationIgnored private var listings: [URL: [TreeNode]] = [:]
   private var listingVersion = 0
   @ObservationIgnored private let lister: DirectoryLister
+  /// Nil when `useDevIcons` is off or the font is missing; rows then show `doc`.
+  @ObservationIgnored let devIcons: DevIcons?
   @ObservationIgnored private let watcher: any FileWatching
   @ObservationIgnored private var treeWatch: WatchToken?
   /// FSEvents reports resolved paths (`/private/var/…`); the tree keeps the
@@ -49,12 +51,13 @@ public final class FileTree {
   ) {
     self.init(
       root: root, options: options, watcher: watcher ?? FSEventsWatcher(), lister: Directory.list,
-      git: Git.run, onError: onError)
+      git: Git.run, devIcons: options.useDevIcons ? .shared : nil, onError: onError)
   }
 
   init(
     root: URL, options: FileTreeOptions, watcher: any FileWatching,
     lister: @escaping DirectoryLister, git run: @escaping GitRunner = Git.run,
+    devIcons: DevIcons? = nil,
     onError: @escaping @MainActor (FileTreeError) -> Void = { _ in }
   ) {
     self.root = URL(filePath: root.standardizedFileURL.path, directoryHint: .notDirectory)
@@ -63,6 +66,8 @@ public final class FileTree {
     self.watcher = watcher
     self.lister = lister
     self.expanded = [self.root]
+    if let devIcons, !devIcons.isAvailable { onError(.devIconsUnavailable) }
+    self.devIcons = devIcons?.isAvailable == true ? devIcons : nil
     let resolved = Self.realPath(self.root.path)
     self.resolvedRoot = resolved == self.root.path ? nil : resolved
     startWatching()

@@ -83,7 +83,7 @@ private struct FileTreeRow<RightClickMenu: View>: View {
     HStack(spacing: 0) {
       IndentGuides(
         depth: row.depth, metrics: metrics, isVisible: tree.options.showIndentGuides)
-      Image(systemName: icon)
+      icon
         .frame(width: metrics.iconWidth)
       Text(node.name)
         .foregroundStyle(tree.status(of: node.url).flatMap(tree.options.colors.color) ?? .primary)
@@ -109,10 +109,18 @@ private struct FileTreeRow<RightClickMenu: View>: View {
     .contextMenu { view.rightClickMenu(tree.info(for: node.url)) }
   }
 
-  /// SF Symbols has no open-folder glyph, so the filled folder marks an open one.
-  private var icon: String {
-    if node.isDirectory { return tree.isExpanded(node.url) ? "folder.fill" : "folder" }
-    return node.isSymlink ? "link" : "doc"
+  /// A devicon glyph for a mapped file, otherwise an SF Symbol. SF Symbols has
+  /// no open-folder glyph, so the filled folder marks an open one.
+  @ViewBuilder private var icon: some View {
+    if node.isDirectory {
+      Image(systemName: tree.isExpanded(node.url) ? "folder.fill" : "folder")
+    } else if node.isSymlink {
+      Image(systemName: "link")
+    } else if let devIcons = tree.devIcons, let glyph = devIcons.glyph(for: node.name) {
+      Text(String(glyph)).font(.custom(devIcons.fontName, size: metrics.fontSize))
+    } else {
+      Image(systemName: "doc")
+    }
   }
 }
 

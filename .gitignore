@@ -60,3 +60,8 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# devicon font, glyph map, license and version: fetched by `make fonts`, and
+# committed only on release-tag commits (see .github/workflows/release.yml).
+Sources/SwiftTree/Resources/DevIcons/*
+!Sources/SwiftTree/Resources/DevIcons/README.md

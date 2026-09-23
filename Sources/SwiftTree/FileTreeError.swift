@@ -9,6 +9,9 @@ public enum FileTreeError: Error, Equatable, Sendable {
   case gitUnavailable
   /// One repo's git command failed. Reported once until it recovers; other repos are unaffected.
   case gitFailed(repo: URL, message: String)
+  /// `useDevIcons` is on but the bundled devicon font is missing (no `make fonts`) or unreadable.
+  /// Reported once, from `FileTree`'s init; file rows show `doc`.
+  case devIconsUnavailable
 }
 
 /// Returned by `FileTree.register(path:callback:)`; pass to `unregister(_:)`.

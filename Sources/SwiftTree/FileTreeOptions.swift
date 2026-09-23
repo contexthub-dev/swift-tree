@@ -21,6 +21,8 @@ public struct FileTreeOptions: Sendable {
     set { _fontSize = min(max(newValue, 8), 32) }
   }
   private var _fontSize: CGFloat = 12
+  /// devicon file-type glyphs on file rows; `doc` when off, unmapped, or the font is missing.
+  public var useDevIcons = true
   /// Override any status color: `options.colors.modified = .orange`.
   public var colors = StatusColors.zed
   public init() {}

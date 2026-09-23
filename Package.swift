@@ -10,7 +10,8 @@ let package = Package(
     .library(name: "SwiftTree", targets: ["SwiftTree"])
   ],
   targets: [
-    .target(name: "SwiftTree"),
+    // DevIcons/ holds the devicon font from `make fonts`; see its README.
+    .target(name: "SwiftTree", resources: [.copy("Resources/DevIcons")]),
     .testTarget(name: "SwiftTreeTests", dependencies: ["SwiftTree"]),
   ]
 )

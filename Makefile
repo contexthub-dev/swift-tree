@@ -2,7 +2,7 @@
 # so a contributor's local run is byte-identical to the CI gate.
 SWIFT_FORMAT_PATHS := Package.swift Sources Tests demo/Package.swift demo/Sources demo/Tests
 
-.PHONY: format-check format build test demo demo-test
+.PHONY: format-check format build test demo demo-test fonts
 
 ## Report violations as file:line:col: error: [Rule]. Non-zero exit if any.
 format-check:
@@ -11,6 +11,10 @@ format-check:
 ## Rewrite the same paths in place to match swift format's defaults.
 format:
 	swift format --in-place --recursive $(SWIFT_FORMAT_PATHS)
+
+## Download the latest devicon font, license and glyph map (gitignored; release tags carry them).
+fonts:
+	scripts/fetch-devicons.sh
 
 build:
 	swift build

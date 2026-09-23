@@ -8,6 +8,7 @@ struct OptionsTests {
     let options = FileTreeOptions()
     #expect(options.showIndentGuides)
     #expect(options.fontSize == 12)
+    #expect(options.useDevIcons)
   }
 
   @Test func fontSizeIsClampedTo8Through32() {
