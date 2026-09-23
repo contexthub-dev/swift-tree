@@ -29,8 +29,8 @@ jobs:
       - name: Test
         run: make test
 
-      - name: Build demo
-        run: make demo
+      - name: Build and test demo
+        run: make demo-test
 
   # SwiftPM resolves packages from the bare semver tag; the release only adds notes.
   release:

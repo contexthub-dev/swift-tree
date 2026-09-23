@@ -106,6 +106,6 @@ settings and click Apply, pause and resume watching, and watch clicks, errors
 and status callbacks as they happen.
 
 ```sh
-swift run --package-path demo                      # choose a folder in the app
-swift run --package-path demo SwiftTreeDemo -root ~/code/my-repo
+make demo                   # choose a folder in the app
+make demo ROOT=~/code/my-repo
 ```

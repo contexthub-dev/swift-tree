@@ -38,7 +38,8 @@ Repo-specific facts. One per line, terse.
 
 ## Demo app
 - `demo/` is its own SwiftPM package (path dep `..`), so consumers never resolve it. `make demo`
-  = build + test. Format paths list `demo/Package.swift demo/Sources demo/Tests`, never plain
+  = build + launch (`ROOT=<folder>` optional); `make demo-test` = build + test, the CI gate.
+  Never point CI at `make demo`: it opens a window and never exits. Format paths list `demo/Package.swift demo/Sources demo/Tests`, never plain
   `demo` (that would lint `demo/.build`).
 - `swift run --package-path demo SwiftTreeDemo -root <folder>` skips the picker. A bare path arg
   opens no window (AppKit treats it as a file to open).
