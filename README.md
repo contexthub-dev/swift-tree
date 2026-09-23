@@ -1,5 +1,7 @@
 # swift-tree
 
+[![Latest release](https://img.shields.io/github/v/release/contexthub-dev/swift-tree?sort=semver)](https://github.com/contexthub-dev/swift-tree/releases/latest)
+
 A SwiftUI file tree for macOS apps, like the project navigator in an IDE. It
 colors every file and folder by its git status and keeps up with changes on
 disk and in git. Nested repositories are supported.
@@ -21,7 +23,7 @@ callbacks on the right.
 ## Install
 
 ```swift
-.package(url: "https://github.com/contexthub-dev/swift-tree.git", from: "0.1.0")
+.package(url: "https://github.com/contexthub-dev/swift-tree.git", from: "0.2.0")
 ```
 
 and add `"SwiftTree"` to your target's dependencies.
