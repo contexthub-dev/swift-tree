@@ -1,0 +1,6 @@
+# Swift Package Index config: build and host DocC docs for the SwiftTree target.
+# https://swiftpackageindex.com/SwiftPackageIndex/SPIManifest/documentation/spimanifest
+version: 1
+builder:
+  configs:
+    - documentation_targets: [SwiftTree]
