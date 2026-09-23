@@ -13,6 +13,14 @@ public struct StatusColors: Sendable {
     self.ignored = ignored
   }
 
+  /// One color for modified, untracked, staged and deleted. Ignored keeps Zed's gray;
+  /// set any status afterwards to override just that one.
+  public init(all color: Color) {
+    self.init(
+      modified: color, untracked: color, staged: color, deleted: color,
+      ignored: StatusColors.zed.ignored)
+  }
+
   /// Zed's One Dark / One Light status colors (`modified`, `created`, `deleted`,
   /// `ignored`), switching with the system appearance. Zed has no staged
   /// color, so staged borrows its `renamed` blue (a rename reads as staged here too).

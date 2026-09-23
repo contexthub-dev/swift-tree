@@ -12,6 +12,15 @@ public struct FileTreeOptions: Sendable {
   public var showBranchNames = false
   /// Light or dark rendering of the tree, independent of the system appearance.
   public var theme = ColorScheme.dark
+  /// Vertical guide lines beside the contents of each open folder.
+  public var showIndentGuides = true
+  /// Point size of row names; icons, branch labels, row height and indent scale with it.
+  /// Clamped to 8...32.
+  public var fontSize: CGFloat {
+    get { _fontSize }
+    set { _fontSize = min(max(newValue, 8), 32) }
+  }
+  private var _fontSize: CGFloat = 12
   /// Override any status color: `options.colors.modified = .orange`.
   public var colors = StatusColors.zed
   public init() {}
