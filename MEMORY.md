@@ -65,6 +65,11 @@ Repo-specific facts. One per line, terse.
   light-theme tree over a dark host is unreadable.
 - To screenshot expanded folders without clicking: temporarily `setExpanded` paths in
   `DemoModel.rebuild`, capture, revert.
+- README screenshots = `docs/screenshots/demo-{dark,light}.png`, the demo opened on this repo at
+  1280×1000. Recipe: temp patch in `DemoApp.init` (theme from a `-theme` default, branch names on,
+  expand `.github/workflows` + `Sources/SwiftTree`), and after ~4 s `NSApp.activate()`, set the
+  window frame, and call `model.clicked(info(README.md))` (earlier = inspector shows no git status
+  yet; inactive window = gray toggles). Capture by window id, then `git checkout` the patch.
 - `options.theme` (a SwiftUI `ColorScheme`, default `.dark`) is applied by `FileTreeView` via
   `.environment(\.colorScheme)`, scoped to the tree. Never `.preferredColorScheme` in the library:
   that changes the host's window. Default dark changed 0.1.0's follow-the-system look.
