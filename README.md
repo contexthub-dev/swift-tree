@@ -9,6 +9,15 @@ disk and in git. Nested repositories are supported.
 - Uses the `git` CLI (2.30+) found on `PATH`
 - Apache 2.0
 
+| Dark (default) | Light |
+|----------------|-------|
+| ![swift-tree demo, dark theme](docs/screenshots/demo-dark.png) | ![swift-tree demo, light theme](docs/screenshots/demo-light.png) |
+
+The [demo app](#demo) opened on this repo: the tree on the left (devicon file
+icons, indent guides, git status colors, the branch label on the repo root),
+the demo's settings in the middle, and the last-clicked item and status
+callbacks on the right.
+
 ## Install
 
 ```swift
@@ -53,6 +62,9 @@ tree root, `isDirectory`, `repoRoot`, and `gitStatus`.
 
 ## Options
 
+Everything configurable, in one place. `FileTreeOptions` is fixed when the
+`FileTree` is created; to change one, create a new tree.
+
 ```swift
 var options = FileTreeOptions()
 options.detectGit = true                        // false: no colors, no git calls
@@ -68,6 +80,70 @@ options.useDevIcons = true                      // devicon file-type glyphs; fal
 
 let tree = FileTree(root: root, options: options)
 ```
+
+### `FileTreeOptions`
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `detectGit` | `true` | `false`: no status colors, no branch labels, and no git command ever runs. |
+| `canHaveMultipleGitRepositories` | `true` | `false`: nested repos are ignored; everything resolves against the repo containing the root. |
+| `showHiddenFiles` | `true` | Initial value of `tree.showHiddenFiles` (dot-named entries). |
+| `showBranchNames` | `false` | Label each repo-root folder with its branch, or the short SHA when HEAD is detached. |
+| `theme` | `.dark` | `.light` or `.dark` for the tree only, independent of the system and the host window. |
+| `showIndentGuides` | `true` | A vertical line beside the contents of each open folder. |
+| `fontSize` | `12` | Point size of row names; icons, branch labels, row height and indent scale with it. Clamped to 8-32. |
+| `colors` | `StatusColors.zed` | Text color per git status (see below). |
+| `useDevIcons` | `true` | devicon glyphs on file rows. Unmapped files, folders and symlinks keep their SF Symbol. |
+
+### `StatusColors`
+
+| Form | Effect |
+|------|--------|
+| `StatusColors.zed` | Zed's One Dark / One Light colors: `modified`, `untracked`, `staged`, `deleted`, `ignored`. |
+| `StatusColors(modified:untracked:staged:deleted:ignored:)` | Every status set explicitly. |
+| `StatusColors(all: color)` | One color for modified, untracked, staged and deleted; `ignored` keeps Zed's gray. |
+| `options.colors.staged = .blue` | Any single status can be changed afterwards. |
+
+Unmodified rows always use the normal text color.
+
+### `FileTree` init
+
+```swift
+FileTree(root: URL,
+         options: FileTreeOptions = .init(),
+         watcher: (any FileWatching)? = nil,          // nil: the tree creates its own FSEventsWatcher
+         onError: @MainActor (FileTreeError) -> Void = { _ in })
+```
+
+`onError` receives:
+
+| Error | When |
+|-------|------|
+| `.gitUnavailable` | No usable `git` on `PATH`. Once; the tree shows no colors. |
+| `.gitFailed(repo:message:)` | One repo's git command failed. Once until it recovers; other repos are unaffected. |
+| `.devIconsUnavailable` | `useDevIcons` is on but the font isn't bundled (see [Developing and releasing](#developing-and-releasing)). Once; file rows show `doc`. |
+
+### Changeable at runtime
+
+| On `FileTree` | Effect |
+|---------------|--------|
+| `showHiddenFiles` | Show or hide dot-named entries. Open folders stay open. |
+| `setExpanded(url, Bool)` | Open or close a folder. The root starts open. |
+| `pause()` / `await resume()` | Stop and restart following file changes (see [Watching](#watching)). |
+
+### `FSEventsWatcher`
+
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `latency` | `0.3` s | How long FSEvents batches changes before one refresh. |
+
+### `FileTreeView`
+
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `tree` | required | The `FileTree` to draw. |
+| `onLeftClick` | no-op | Called with the row's `TreeItemInfo` after it's selected (folders also toggle). |
+| `rightClickMenu` | none | A `@ViewBuilder` returning the context menu for the row's `TreeItemInfo`. Empty: no menu. |
 
 `.git` is never shown. Symlinks are listed but not followed.
 
@@ -97,14 +173,24 @@ tree.unregister(sub)
 let all = try await tree.snapshot(of: root)  // [URL: GitStatus], incl. deleted files
 ```
 
-Paths outside the root, or any call with `detectGit = false`, throw
-`FileTreeError`.
+Paths outside the root throw `FileTreeError.pathOutsideRoot`. With
+`detectGit = false`, `snapshot` throws `.gitDetectionDisabled`, and `register`
+succeeds but never calls back.
 
 ## Demo
 
-`demo/` is a small app for trying every option by hand: pick a folder, change
-settings and click Apply, pause and resume watching, and watch clicks, errors
-and status callbacks as they happen.
+`demo/` is a small app for trying every option by hand (the screenshots above).
+Pick a folder, change settings, and click **Apply** to rebuild the tree with them.
+
+| Where | What you can do |
+|-------|-----------------|
+| Settings → Tree | Show hidden files, Detect git, Multiple git repositories, Show branch names, Dark theme, Show indent guides, Use DevIcons, Font size (8-32 pt) |
+| Settings → Colors | Single color for every change, or a color per status (modified, untracked, staged, deleted, ignored); Reset colors |
+| Settings → Watcher | FSEvents latency (0.05-5 s) |
+| Toolbar | Choose Folder…, Pause / Resume watching |
+| Tree | Left click selects (folders toggle); right click shows Reveal in Finder and Copy Relative Path |
+| Inspector | The last-clicked item's `TreeItemInfo`, and every status callback as it arrives |
+| Footer | Watching state, or the last `FileTreeError` |
 
 ```sh
 make demo                   # choose a folder in the app
