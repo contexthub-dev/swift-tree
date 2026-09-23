@@ -9,6 +9,10 @@ struct DemoSettings: Equatable {
   var showHiddenFiles = true
   var showBranchNames = false
   var theme = ColorScheme.dark
+  var showIndentGuides = true
+  var fontSize: CGFloat = 12
+  var useSingleColor = false
+  var singleColor = StatusColors.zed.modified
   var modified = StatusColors.zed.modified
   var untracked = StatusColors.zed.untracked
   var staged = StatusColors.zed.staged
@@ -25,13 +29,21 @@ struct DemoSettings: Equatable {
     options.showHiddenFiles = showHiddenFiles
     options.showBranchNames = showBranchNames
     options.theme = theme
-    options.colors = StatusColors(
-      modified: modified, untracked: untracked, staged: staged, deleted: deleted, ignored: ignored)
+    options.showIndentGuides = showIndentGuides
+    options.fontSize = fontSize
+    options.colors =
+      useSingleColor
+      ? StatusColors(all: singleColor)
+      : StatusColors(
+        modified: modified, untracked: untracked, staged: staged, deleted: deleted, ignored: ignored
+      )
     return options
   }
 
   mutating func resetColors() {
     let zed = StatusColors.zed
+    useSingleColor = false
+    singleColor = zed.modified
     (modified, untracked, staged, deleted, ignored) =
       (zed.modified, zed.untracked, zed.staged, zed.deleted, zed.ignored)
   }

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftTree
 import SwiftUI
 import Testing
 
@@ -74,5 +75,39 @@ import Testing
     model.draft.showBranchNames = true
     model.apply()
     #expect(model.log.isEmpty)
+  }
+}
+
+@MainActor struct NewOptionsTests {
+  @Test func singleColorMapsToEveryChangeButIgnored() {
+    var settings = DemoSettings()
+    settings.useSingleColor = true
+    settings.singleColor = .purple
+    let colors = settings.options.colors
+    #expect(
+      [colors.modified, colors.untracked, colors.staged, colors.deleted].allSatisfy {
+        $0 == .purple
+      })
+    #expect(colors.ignored == StatusColors.zed.ignored)
+  }
+
+  @Test func guidesAndFontSizeRebuildTheTree() throws {
+    let model = DemoModel()
+    model.open(FileManager.default.temporaryDirectory)
+    let old = try #require(model.tree)
+    model.draft.showIndentGuides = false
+    model.draft.fontSize = 16
+    model.apply()
+    let tree = try #require(model.tree)
+    #expect(tree !== old)
+    #expect(!tree.options.showIndentGuides && tree.options.fontSize == 16)
+  }
+
+  @Test func resetColorsTurnsSingleColorOff() {
+    var settings = DemoSettings()
+    settings.useSingleColor = true
+    settings.singleColor = .purple
+    settings.resetColors()
+    #expect(settings == DemoSettings())
   }
 }

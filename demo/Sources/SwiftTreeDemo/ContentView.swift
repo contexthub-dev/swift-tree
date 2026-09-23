@@ -131,13 +131,21 @@ struct SettingsForm: View {
           isOn: Binding(
             get: { model.draft.theme == .dark },
             set: { model.draft.theme = $0 ? .dark : .light }))
+        Toggle("Show indent guides", isOn: $model.draft.showIndentGuides)
+        Stepper(
+          "Font size: \(Int(model.draft.fontSize)) pt", value: $model.draft.fontSize, in: 8...32)
       }
       Section("Colors") {
-        ColorPicker("Modified", selection: $model.draft.modified)
-        ColorPicker("Untracked", selection: $model.draft.untracked)
-        ColorPicker("Staged", selection: $model.draft.staged)
-        ColorPicker("Deleted", selection: $model.draft.deleted)
-        ColorPicker("Ignored", selection: $model.draft.ignored)
+        Toggle("Single color", isOn: $model.draft.useSingleColor)
+        if model.draft.useSingleColor {
+          ColorPicker("Changed files", selection: $model.draft.singleColor)
+        } else {
+          ColorPicker("Modified", selection: $model.draft.modified)
+          ColorPicker("Untracked", selection: $model.draft.untracked)
+          ColorPicker("Staged", selection: $model.draft.staged)
+          ColorPicker("Deleted", selection: $model.draft.deleted)
+          ColorPicker("Ignored", selection: $model.draft.ignored)
+        }
         Button("Reset colors") { model.draft.resetColors() }
       }
       Section("Watcher") {

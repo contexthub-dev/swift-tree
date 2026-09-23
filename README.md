@@ -60,7 +60,10 @@ options.canHaveMultipleGitRepositories = true   // false: ignore nested repos
 options.showHiddenFiles = true                  // toggle later via tree.showHiddenFiles
 options.showBranchNames = false                 // label repo-root folders with their branch
 options.theme = .dark                           // .light or .dark, regardless of system appearance
+options.showIndentGuides = true                 // vertical lines beside open folders' contents
+options.fontSize = 12                           // 8-32; row height and indent scale with it
 options.colors.modified = .orange               // override any status color
+options.colors = StatusColors(all: .orange)     // one color for every change; ignored stays gray
 
 let tree = FileTree(root: root, options: options)
 ```
