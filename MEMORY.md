@@ -43,6 +43,15 @@ Repo-specific facts. One per line, terse.
 - `swift run --package-path demo SwiftTreeDemo -root <folder>` skips the picker. A bare path arg
   opens no window (AppKit treats it as a file to open).
 - Apply rebuilds the `FileTree` (options are `let`); only `showHiddenFiles` applies live.
+- The view is flat rows, not `List`: `ScrollView` + `LazyVStack(spacing: 0)` over
+  `FileTree.visibleRows()` (depth-first, reads only expanded folders). macOS `List` adds row insets
+  and a minimum height that break compact, gap-free rows and indent guides.
+- ALL row geometry (height, indent, icon width, branch font) comes from `RowMetrics(fontSize:)`.
+  Tune ratios there only. Indent guides are drawn per row at full height so segments join.
+- The tree paints `.background(.background)` inside the theme environment; without it, a
+  light-theme tree over a dark host is unreadable.
+- To screenshot expanded folders without clicking: temporarily `setExpanded` paths in
+  `DemoModel.rebuild`, capture, revert.
 - `options.theme` (a SwiftUI `ColorScheme`, default `.dark`) is applied by `FileTreeView` via
   `.environment(\.colorScheme)`, scoped to the tree. Never `.preferredColorScheme` in the library:
   that changes the host's window. Default dark changed 0.1.0's follow-the-system look.
