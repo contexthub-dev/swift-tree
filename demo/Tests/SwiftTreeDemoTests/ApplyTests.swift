@@ -124,3 +124,40 @@ import Testing
     #expect(settings == DemoSettings())
   }
 }
+
+@MainActor struct LiveThemeAndNamingTests {
+  @Test func themeAloneRethemesTheLiveTree() throws {
+    let model = DemoModel()
+    model.open(FileManager.default.temporaryDirectory)
+    let tree = try #require(model.tree)
+    model.draft.theme = .light
+    model.apply()
+    #expect(model.tree === tree)
+    #expect(tree.theme == .light)
+  }
+
+  @Test func commitCreatesRenamesAndRefusesAnExistingName() throws {
+    let dir = FileManager.default.temporaryDirectory.appending(path: "demo-\(UUID())")
+    try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: dir) }
+    let model = DemoModel()
+    model.open(dir)
+    let tree = try #require(model.tree)
+    let file = dir.appending(path: "a.txt")
+
+    tree.inlineEdit = .create(in: tree.root, isDirectory: false)
+    model.commitName("a.txt")
+    #expect(FileManager.default.fileExists(atPath: file.path))
+    #expect(tree.inlineEdit == nil)
+
+    try Data("keep".utf8).write(to: file)
+    tree.inlineEdit = .create(in: tree.root, isDirectory: false)
+    model.commitName("a.txt")
+    #expect(try Data(contentsOf: file) == Data("keep".utf8))
+    #expect(model.nameError != nil)
+
+    tree.inlineEdit = .rename(file)
+    model.commitName("b.txt")
+    #expect(FileManager.default.fileExists(atPath: dir.appending(path: "b.txt").path))
+  }
+}

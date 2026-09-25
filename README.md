@@ -23,7 +23,7 @@ callbacks on the right.
 ## Install
 
 ```swift
-.package(url: "https://github.com/contexthub-dev/swift-tree.git", from: "0.2.0")
+.package(url: "https://github.com/contexthub-dev/swift-tree.git", from: "0.4.0")
 ```
 
 and add `"SwiftTree"` to your target's dependencies.
@@ -76,6 +76,7 @@ options.showBranchNames = false                 // label repo-root folders with 
 options.theme = .dark                           // .light or .dark, regardless of system appearance
 options.showIndentGuides = true                 // vertical lines beside open folders' contents
 options.fontSize = 12                           // 8-32; row height and indent scale with it
+options.fontFamily = "PT Sans"                  // nil (default): the system font
 options.colors.modified = .orange               // override any status color
 options.colors = StatusColors(all: .orange)     // one color for every change; ignored stays gray
 options.useDevIcons = true                      // devicon file-type glyphs; false: generic doc icon
@@ -91,9 +92,10 @@ let tree = FileTree(root: root, options: options)
 | `canHaveMultipleGitRepositories` | `true` | `false`: nested repos are ignored; everything resolves against the repo containing the root. |
 | `showHiddenFiles` | `true` | Initial value of `tree.showHiddenFiles` (dot-named entries; `.DS_Store` is never shown). |
 | `showBranchNames` | `false` | Label each repo-root folder with its branch, or the short SHA when HEAD is detached. |
-| `theme` | `.dark` | `.light` or `.dark` for the tree only, independent of the system and the host window. |
+| `theme` | `.dark` | `.light` or `.dark` for the tree only, independent of the system and the host window. Initial value of `tree.theme`. |
 | `showIndentGuides` | `true` | A vertical line beside the contents of each open folder. |
 | `fontSize` | `12` | Point size of row names; icons, branch labels, row height and indent scale with it. Clamped to 8-32. |
+| `fontFamily` | `nil` | Font family of row names and branch labels; `nil` or a family that isn't installed uses the system font. Devicon glyphs keep their own font. |
 | `colors` | `StatusColors.zed` | Text color per git status (see below). |
 | `useDevIcons` | `true` | devicon glyphs on file rows. Unmapped files, folders and symlinks keep their SF Symbol. |
 
@@ -130,6 +132,9 @@ FileTree(root: URL,
 | On `FileTree` | Effect |
 |---------------|--------|
 | `showHiddenFiles` | Show or hide dot-named entries. Open folders stay open. |
+| `theme` | Re-theme the tree. Open folders and the selection stay. |
+| `selection` | The highlighted row. A left click sets it; setting it yourself calls no handler and toggles nothing. |
+| `inlineEdit` | `.rename(url)` or `.create(in: folder, isDirectory:)`: draw the view's `inlineEditor` for that row (see [Naming rows inline](#naming-rows-inline)). `nil` closes it. |
 | `setExpanded(url, Bool)` | Open or close a folder. The root starts open. |
 | `pause()` / `await resume()` | Stop and restart following file changes (see [Watching](#watching)). |
 
@@ -146,6 +151,24 @@ FileTree(root: URL,
 | `tree` | required | The `FileTree` to draw. |
 | `onLeftClick` | no-op | Called with the row's `TreeItemInfo` after it's selected (folders also toggle). |
 | `rightClickMenu` | none | A `@ViewBuilder` returning the context menu for the row's `TreeItemInfo`. Empty: no menu. |
+| `inlineEditor` | none | A `@ViewBuilder` returning your name field for `tree.inlineEdit`. |
+
+### Naming rows inline
+
+The tree doesn't create or rename files; it gives your own field a place in the
+row. Set `tree.inlineEdit` and the view draws `inlineEditor` in place of the
+row's name (`.rename`), or as a new first row inside the folder (`.create`, the
+folder must be open), keeping icon, indent and guides. Do the file work
+yourself, then set `inlineEdit = nil`. The watcher shows the result.
+
+```swift
+FileTreeView(tree: tree) { _ in } rightClickMenu: { item in
+  Button("Rename") { tree.inlineEdit = .rename(item.url) }
+} inlineEditor: { edit in
+  MyNameField(edit: edit, commit: { name in rename(edit, to: name); tree.inlineEdit = nil },
+              cancel: { tree.inlineEdit = nil })
+}
+```
 
 `.git` is never shown. Symlinks are listed but not followed.
 
@@ -186,11 +209,11 @@ Pick a folder, change settings, and click **Apply** to rebuild the tree with the
 
 | Where | What you can do |
 |-------|-----------------|
-| Settings → Tree | Show hidden files, Detect git, Multiple git repositories, Show branch names, Dark theme, Show indent guides, Use DevIcons, Font size (8-32 pt) |
+| Settings → Tree | Show hidden files, Detect git, Multiple git repositories, Show branch names, Dark theme, Show indent guides, Use DevIcons, Font size (8-32 pt), Font family |
 | Settings → Colors | Single color for every change, or a color per status (modified, untracked, staged, deleted, ignored); Reset colors |
 | Settings → Watcher | FSEvents latency (0.05-5 s) |
 | Toolbar | Choose Folder…, Pause / Resume watching |
-| Tree | Left click selects (folders toggle); right click shows Reveal in Finder and Copy Relative Path |
+| Tree | Left click selects (folders toggle); right click shows New File, New Folder, Rename (named inline: Enter commits, Escape cancels), Reveal in Finder and Copy Relative Path |
 | Inspector | The last-clicked item's `TreeItemInfo`, and every status callback as it arrives |
 | Footer | Watching state, or the last `FileTreeError` |
 

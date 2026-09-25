@@ -5,23 +5,30 @@ import SwiftUI
 /// A left click selects the row (and toggles a folder), then calls `onLeftClick`.
 /// A right click or control-click shows the menu `rightClickMenu` builds for
 /// that row; an empty menu shows nothing.
-public struct FileTreeView<RightClickMenu: View>: View {
+///
+/// While `tree.inlineEdit` is set, `inlineEditor` draws in place of the row's
+/// name (rename) or as a new first row inside the folder (create), keeping the
+/// row's icon, indent and guides.
+public struct FileTreeView<RightClickMenu: View, InlineEditor: View>: View {
   let tree: FileTree
   let onLeftClick: @MainActor (TreeItemInfo) -> Void
   let rightClickMenu: @MainActor (TreeItemInfo) -> RightClickMenu
+  let inlineEditor: @MainActor (InlineEdit) -> InlineEditor
 
   public init(
     tree: FileTree,
     onLeftClick: @escaping @MainActor (TreeItemInfo) -> Void = { _ in },
-    @ViewBuilder rightClickMenu: @escaping @MainActor (TreeItemInfo) -> RightClickMenu
+    @ViewBuilder rightClickMenu: @escaping @MainActor (TreeItemInfo) -> RightClickMenu,
+    @ViewBuilder inlineEditor: @escaping @MainActor (InlineEdit) -> InlineEditor
   ) {
     self.tree = tree
     self.onLeftClick = onLeftClick
     self.rightClickMenu = rightClickMenu
+    self.inlineEditor = inlineEditor
   }
 
   public var body: some View {
-    content.environment(\.colorScheme, tree.options.theme)
+    content.environment(\.colorScheme, tree.theme)
   }
 
   /// A `LazyVStack`, not a `List`: the AppKit table under a macOS `List` adds row
@@ -35,7 +42,18 @@ public struct FileTreeView<RightClickMenu: View>: View {
       let metrics = RowMetrics(fontSize: tree.options.fontSize)
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
-          ForEach(tree.visibleRows()) { FileTreeRow(row: $0, metrics: metrics, view: self) }
+          ForEach(tree.visibleRows()) { row in
+            switch row.kind {
+            case .node(let node):
+              FileTreeRow(node: node, depth: row.depth, metrics: metrics, view: self)
+            case .newEntry(let folder, let isDirectory):
+              RowLayout(depth: row.depth, metrics: metrics, tree: tree) {
+                Image(systemName: isDirectory ? "folder" : "doc")
+              } name: {
+                inlineEditor(.create(in: folder, isDirectory: isDirectory))
+              }
+            }
+          }
         }
         .padding(.vertical, 4)
       }
@@ -45,7 +63,19 @@ public struct FileTreeView<RightClickMenu: View>: View {
   }
 }
 
-extension FileTreeView where RightClickMenu == EmptyView {
+extension FileTreeView where InlineEditor == EmptyView {
+  public init(
+    tree: FileTree,
+    onLeftClick: @escaping @MainActor (TreeItemInfo) -> Void = { _ in },
+    @ViewBuilder rightClickMenu: @escaping @MainActor (TreeItemInfo) -> RightClickMenu
+  ) {
+    self.init(tree: tree, onLeftClick: onLeftClick, rightClickMenu: rightClickMenu) { _ in
+      EmptyView()
+    }
+  }
+}
+
+extension FileTreeView where RightClickMenu == EmptyView, InlineEditor == EmptyView {
   public init(tree: FileTree, onLeftClick: @escaping @MainActor (TreeItemInfo) -> Void = { _ in }) {
     self.init(tree: tree, onLeftClick: onLeftClick) { _ in EmptyView() }
   }
@@ -53,9 +83,17 @@ extension FileTreeView where RightClickMenu == EmptyView {
 
 /// A row on screen and how deep it sits; the root is depth 0.
 struct VisibleRow: Identifiable, Equatable {
-  let node: TreeNode
+  /// A listed entry, or the host's new-entry row as the first child of `in`.
+  enum Kind: Hashable {
+    case node(TreeNode)
+    case newEntry(in: URL, isDirectory: Bool)
+  }
+  let kind: Kind
   let depth: Int
-  var id: URL { node.url }
+  var id: Kind { kind }
+  var node: TreeNode? {
+    if case .node(let node) = kind { node } else { nil }
+  }
 }
 
 /// Row geometry from the font size. The ratios are tuned against Zed's look
@@ -72,37 +110,63 @@ struct RowMetrics: Equatable {
   }
 }
 
-private struct FileTreeRow<RightClickMenu: View>: View {
-  let row: VisibleRow
+/// Guides, icon and name at a row's depth: what every row, including the
+/// new-entry row, shares. The font family and size apply to the whole row.
+private struct RowLayout<Icon: View, Name: View>: View {
+  let depth: Int
   let metrics: RowMetrics
-  let view: FileTreeView<RightClickMenu>
-  var tree: FileTree { view.tree }
-  var node: TreeNode { row.node }
+  let tree: FileTree
+  @ViewBuilder let icon: Icon
+  @ViewBuilder let name: Name
 
   var body: some View {
     HStack(spacing: 0) {
-      IndentGuides(
-        depth: row.depth, metrics: metrics, isVisible: tree.options.showIndentGuides)
+      IndentGuides(depth: depth, metrics: metrics, isVisible: tree.options.showIndentGuides)
       icon
         .frame(width: metrics.iconWidth)
-      Text(node.name)
-        .foregroundStyle(tree.status(of: node.url).flatMap(tree.options.colors.color) ?? .primary)
+      name
         .padding(.leading, metrics.indent / 4)
-      if let branch = tree.branch(of: node.url) {
-        Text(branch)
-          .font(.system(size: metrics.branchFontSize))
-          .foregroundStyle(.secondary)
-          .padding(.leading, metrics.indent / 2)
-      }
       Spacer(minLength: 0)
     }
-    .font(.system(size: metrics.fontSize))
+    .font(tree.options.font(size: metrics.fontSize))
     .lineLimit(1)
     .padding(.horizontal, metrics.indent / 2)
     .frame(height: metrics.rowHeight)
+  }
+}
+
+private struct FileTreeRow<RightClickMenu: View, InlineEditor: View>: View {
+  let node: TreeNode
+  let depth: Int
+  let metrics: RowMetrics
+  let view: FileTreeView<RightClickMenu, InlineEditor>
+  var tree: FileTree { view.tree }
+
+  var body: some View {
+    RowLayout(depth: depth, metrics: metrics, tree: tree) {
+      icon
+    } name: {
+      if tree.inlineEdit == .rename(node.url) {
+        view.inlineEditor(.rename(node.url))
+      } else {
+        HStack(spacing: 0) {
+          Text(node.name)
+            .foregroundStyle(
+              tree.status(of: node.url).flatMap(tree.options.colors.color) ?? .primary)
+          if let branch = tree.branch(of: node.url) {
+            Text(branch)
+              .font(tree.options.font(size: metrics.branchFontSize))
+              .foregroundStyle(.secondary)
+              .padding(.leading, metrics.indent / 2)
+          }
+        }
+      }
+    }
     .background(tree.selection == node.url ? Color.accentColor.opacity(0.18) : Color.clear)
     .contentShape(Rectangle())
     .onTapGesture {
+      // A click into the host's rename field is the field's, not the row's.
+      guard tree.inlineEdit != .rename(node.url) else { return }
       tree.select(node)
       view.onLeftClick(tree.info(for: node.url))
     }
@@ -121,6 +185,13 @@ private struct FileTreeRow<RightClickMenu: View>: View {
     } else {
       Image(systemName: "doc")
     }
+  }
+}
+
+extension FileTreeOptions {
+  /// `fontFamily` at `size`, or the system font when unset.
+  func font(size: CGFloat) -> Font {
+    fontFamily.map { .custom($0, size: size) } ?? .system(size: size)
   }
 }
 

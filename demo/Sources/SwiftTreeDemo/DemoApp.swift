@@ -38,6 +38,8 @@ final class DemoModel {
   private(set) var applied = DemoSettings()
   private(set) var lastClicked: TreeItemInfo?
   private(set) var lastError: (error: FileTreeError, at: Date)?
+  /// The last create or rename failure, shown in the footer.
+  private(set) var nameError: String?
   /// One line per status callback, newest last.
   private(set) var log: [String] = []
   private var subscription: StatusSubscription?
@@ -51,10 +53,11 @@ final class DemoModel {
 
   func apply() {
     guard canApply else { return }
-    let hiddenOnly = draft.differsOnlyInHiddenFiles(from: applied)
+    let liveOnly = draft.differsOnlyInLiveSettings(from: applied)
     applied = draft
-    if hiddenOnly {
+    if liveOnly {
       tree?.showHiddenFiles = applied.showHiddenFiles
+      tree?.theme = applied.theme
     } else {
       rebuild()
     }
@@ -66,6 +69,32 @@ final class DemoModel {
   }
 
   func clicked(_ item: TreeItemInfo) { lastClicked = item }
+
+  /// Creates or renames per the open `inlineEdit`, then closes it. The tree's
+  /// watcher shows the result; a failure lands in the footer's error slot.
+  func commitName(_ name: String) {
+    guard let edit = tree?.inlineEdit else { return }
+    tree?.inlineEdit = nil
+    guard !name.isEmpty, !name.contains("/") else { return }
+    let files = FileManager.default
+    do {
+      switch edit {
+      case .create(let folder, let isDirectory):
+        let url = folder.appending(path: name)
+        // createFile overwrites silently, so an existing name must be refused first.
+        guard !files.fileExists(atPath: url.path) else { throw CocoaError(.fileWriteFileExists) }
+        if isDirectory {
+          try files.createDirectory(at: url, withIntermediateDirectories: false)
+        } else if !files.createFile(atPath: url.path, contents: nil) {
+          throw CocoaError(.fileWriteUnknown)
+        }
+      case .rename(let url):
+        try files.moveItem(at: url, to: url.deletingLastPathComponent().appending(path: name))
+      }
+    } catch {
+      nameError = error.localizedDescription
+    }
+  }
 
   func append(_ line: String) {
     log.append(line)

@@ -32,4 +32,12 @@ struct OptionsTests {
     colors.staged = .blue
     #expect(colors.staged == .blue && colors.modified == .orange)
   }
+
+  @Test func fontFamilyDefaultsToTheSystemFont() {
+    var options = FileTreeOptions()
+    #expect(options.fontFamily == nil)
+    #expect(options.font(size: 12) == .system(size: 12))
+    options.fontFamily = "PT Sans"
+    #expect(options.font(size: 12) == .custom("PT Sans", size: 12))
+  }
 }
