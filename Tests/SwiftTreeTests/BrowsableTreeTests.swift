@@ -119,7 +119,7 @@ struct VisibleRowsTests {
     tree.setExpanded(root.child("a"), true)
     tree.setExpanded(root.child("a").child("c"), true)
 
-    let rows = tree.visibleRows().map { "\($0.depth) \($0.node.name)" }
+    let rows = tree.visibleRows().map { "\($0.depth) \($0.node?.name ?? "+")" }
 
     #expect(
       rows == [
@@ -134,10 +134,31 @@ struct VisibleRowsTests {
     tree.setExpanded(root.child("a"), true)
     tree.showHiddenFiles = false
 
-    let names = tree.visibleRows().map(\.node.name)
+    let names = tree.visibleRows().map { $0.node?.name }
 
     #expect(!names.contains(".env") && !names.contains(".hidden"))
     #expect(names.contains("y.txt"))
+  }
+
+  @Test func creatingInAnOpenFolderAddsANewEntryAsItsFirstChild() {
+    let tree = tree(reads: OSAllocatedUnfairLock(initialState: []))
+    tree.setExpanded(root.child("a"), true)
+    tree.inlineEdit = .create(in: root.child("a"), isDirectory: false)
+
+    let rows = tree.visibleRows().map { "\($0.depth) \($0.node?.name ?? "+")" }
+
+    #expect(rows.prefix(4) == ["0 r", "1 a", "2 +", "2 c"])
+    #expect(rows.filter { $0.hasSuffix("+") }.count == 1)
+  }
+
+  @Test func creatingInAClosedFolderOrRenamingAddsNoRow() {
+    let tree = tree(reads: OSAllocatedUnfairLock(initialState: []))
+    let before = tree.visibleRows()
+
+    tree.inlineEdit = .create(in: root.child("b"), isDirectory: true)
+    #expect(tree.visibleRows() == before)
+    tree.inlineEdit = .rename(root.child("x.txt"))
+    #expect(tree.visibleRows() == before)
   }
 }
 

@@ -13,6 +13,20 @@ struct ContentView: View {
       Group {
         if let tree = model.tree {
           FileTreeView(tree: tree, onLeftClick: model.clicked) { item in
+            if item.isDirectory {
+              Button("New File") {
+                tree.setExpanded(item.url, true)
+                tree.inlineEdit = .create(in: item.url, isDirectory: false)
+              }
+              Button("New Folder") {
+                tree.setExpanded(item.url, true)
+                tree.inlineEdit = .create(in: item.url, isDirectory: true)
+              }
+            }
+            if item.url != tree.root {
+              Button("Rename") { tree.inlineEdit = .rename(item.url) }
+            }
+            Divider()
             Button("Reveal in Finder") {
               NSWorkspace.shared.activateFileViewerSelecting([item.url])
             }
@@ -20,6 +34,8 @@ struct ContentView: View {
               NSPasteboard.general.clearContents()
               NSPasteboard.general.setString(item.relativePath, forType: .string)
             }
+          } inlineEditor: { edit in
+            NameEditor(edit: edit, commit: model.commitName) { tree.inlineEdit = nil }
           }
         } else {
           ContentUnavailableView {
@@ -67,7 +83,11 @@ struct FooterBar: View {
 
   var body: some View {
     HStack {
-      if let (error, at) = model.lastError {
+      if let nameError = model.nameError {
+        Label(nameError, systemImage: "exclamationmark.triangle.fill")
+          .foregroundStyle(.red)
+          .lineLimit(1)
+      } else if let (error, at) = model.lastError {
         Label(
           "\(at.formatted(date: .omitted, time: .standard))  \(String(describing: error))",
           systemImage: "exclamationmark.triangle.fill"
@@ -135,6 +155,7 @@ struct SettingsForm: View {
         Toggle("Use DevIcons", isOn: $model.draft.useDevIcons)
         Stepper(
           "Font size: \(Int(model.draft.fontSize)) pt", value: $model.draft.fontSize, in: 8...32)
+        TextField("Font family", text: $model.draft.fontFamily, prompt: Text("System"))
       }
       Section("Colors") {
         Toggle("Single color", isOn: $model.draft.useSingleColor)
@@ -157,5 +178,27 @@ struct SettingsForm: View {
       }
     }
     .formStyle(.grouped)
+  }
+}
+
+/// The tree's inline name field: Enter commits, Escape cancels. Starts with the
+/// current name when renaming, empty when creating.
+struct NameEditor: View {
+  let edit: InlineEdit
+  let commit: (String) -> Void
+  let cancel: () -> Void
+  @State private var name = ""
+  @FocusState private var isFocused: Bool
+
+  var body: some View {
+    TextField("Name", text: $name)
+      .textFieldStyle(.plain)
+      .focused($isFocused)
+      .onSubmit { commit(name) }
+      .onExitCommand(perform: cancel)
+      .onAppear {
+        if case .rename(let url) = edit { name = url.lastPathComponent }
+        isFocused = true
+      }
   }
 }

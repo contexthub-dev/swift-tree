@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 
 @testable import SwiftTree
@@ -74,5 +75,38 @@ struct ClickTests {
     #expect(tree.isExpanded(src.url))
     tree.select(src)
     #expect(!tree.isExpanded(src.url))
+  }
+
+  @Test func settingSelectionTogglesNothing() async throws {
+    let tree = await tree()
+    let src = try #require(tree.children(of: root).first { $0.name == "src" })
+
+    tree.selection = src.url
+    #expect(tree.selection == src.url)
+    #expect(!tree.isExpanded(src.url))
+    tree.selection = nil
+    #expect(tree.selection == nil)
+  }
+
+  @Test func changingThemeKeepsFoldersOpenAndSelection() async throws {
+    let tree = await tree()
+    let src = try #require(tree.children(of: root).first { $0.name == "src" })
+    tree.select(src)
+    #expect(tree.theme == .dark)
+
+    tree.theme = .light
+
+    #expect(tree.theme == .light)
+    #expect(tree.isExpanded(src.url))
+    #expect(tree.selection == src.url)
+  }
+
+  /// 0.3.0 call sites, which predate `inlineEditor`, must still compile.
+  @Test func olderViewInitsStillCompile() async {
+    let tree = await tree()
+    _ = FileTreeView(tree: tree)
+    _ = FileTreeView(tree: tree) { _ in }
+    _ = FileTreeView(
+      tree: tree, onLeftClick: { _ in }, rightClickMenu: { _ in Button("Reveal") {} })
   }
 }

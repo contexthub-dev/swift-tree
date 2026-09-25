@@ -11,6 +11,8 @@ struct DemoSettings: Equatable {
   var theme = ColorScheme.dark
   var showIndentGuides = true
   var fontSize: CGFloat = 12
+  /// Empty: the system font.
+  var fontFamily = ""
   var useDevIcons = true
   var useSingleColor = false
   var singleColor = StatusColors.zed.modified
@@ -32,6 +34,7 @@ struct DemoSettings: Equatable {
     options.theme = theme
     options.showIndentGuides = showIndentGuides
     options.fontSize = fontSize
+    options.fontFamily = fontFamily.isEmpty ? nil : fontFamily
     options.useDevIcons = useDevIcons
     options.colors =
       useSingleColor
@@ -50,10 +53,11 @@ struct DemoSettings: Equatable {
       (zed.modified, zed.untracked, zed.staged, zed.deleted, zed.ignored)
   }
 
-  /// Hidden files are the one option a live `FileTree` can change without a rebuild.
-  func differsOnlyInHiddenFiles(from other: DemoSettings) -> Bool {
+  /// Hidden files and theme are the options a live `FileTree` can change without a rebuild.
+  func differsOnlyInLiveSettings(from other: DemoSettings) -> Bool {
     var same = self
     same.showHiddenFiles = other.showHiddenFiles
+    same.theme = other.theme
     return same == other && self != other
   }
 }

@@ -11,6 +11,7 @@ public struct FileTreeOptions: Sendable {
   /// Label each repo-root folder with its branch (or short SHA when detached).
   public var showBranchNames = false
   /// Light or dark rendering of the tree, independent of the system appearance.
+  /// Seeds `FileTree.theme`, which can change later.
   public var theme = ColorScheme.dark
   /// Vertical guide lines beside the contents of each open folder.
   public var showIndentGuides = true
@@ -21,6 +22,9 @@ public struct FileTreeOptions: Sendable {
     set { _fontSize = min(max(newValue, 8), 32) }
   }
   private var _fontSize: CGFloat = 12
+  /// Font family of row names and branch labels; nil uses the system font. A family
+  /// that isn't installed falls back to the system font too. Devicon glyphs keep their own font.
+  public var fontFamily: String?
   /// devicon file-type glyphs on file rows; `doc` when off, unmapped, or the font is missing.
   public var useDevIcons = true
   /// Override any status color: `options.colors.modified = .orange`.

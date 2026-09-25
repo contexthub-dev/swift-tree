@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SwiftUI
 
 /// The tree's state: which folders are open, what they contain, and their
 /// git status. `FileTreeView` draws it; hosts can also use it without the view.
@@ -9,11 +10,18 @@ public final class FileTree {
   public let options: FileTreeOptions
   /// Dot-named entries. Toggling re-filters what is already loaded; expansion is untouched.
   public var showHiddenFiles: Bool
+  /// Light or dark rendering of the tree. Starts as `options.theme`; changing it
+  /// re-themes in place, keeping open folders open.
+  public var theme: ColorScheme
   /// The root folder was deleted or moved away while watched.
   public private(set) var rootMissing = false
   public private(set) var isPaused = false
-  /// The last left-clicked row.
-  public private(set) var selection: URL?
+  /// The highlighted row. A left click sets it; a host may also set or clear it,
+  /// which calls no click handler and toggles no folder.
+  public var selection: URL?
+  /// The row the host is naming, drawn with `FileTreeView`'s `inlineEditor`. The
+  /// tree only draws it; the host sets it, commits, and clears it.
+  public var inlineEdit: InlineEdit?
 
   private var expanded: Set<URL>
   /// Loaded folder contents, unfiltered. Filled lazily by `children(of:)`, which
@@ -63,6 +71,7 @@ public final class FileTree {
     self.root = URL(filePath: root.standardizedFileURL.path, directoryHint: .notDirectory)
     self.options = options
     self.showHiddenFiles = options.showHiddenFiles
+    self.theme = options.theme
     self.watcher = watcher
     self.lister = lister
     self.expanded = [self.root]
@@ -96,11 +105,16 @@ public final class FileTree {
 
   /// The rows on screen, top to bottom: the root, then every expanded folder's
   /// children (filtered by `showHiddenFiles`), depth-first. Collapsed folders are never read.
+  /// An `inlineEdit` creating in an open folder adds a new-entry row as its first child.
   func visibleRows() -> [VisibleRow] {
     var rows: [VisibleRow] = []
     func walk(_ node: TreeNode, depth: Int) {
-      rows.append(VisibleRow(node: node, depth: depth))
+      rows.append(VisibleRow(kind: .node(node), depth: depth))
       guard node.isDirectory, isExpanded(node.url) else { return }
+      if case .create(let folder, let isDirectory) = inlineEdit, folder == node.url {
+        rows.append(
+          VisibleRow(kind: .newEntry(in: folder, isDirectory: isDirectory), depth: depth + 1))
+      }
       for child in children(of: node.url) { walk(child, depth: depth + 1) }
     }
     walk(rootNode, depth: 0)
