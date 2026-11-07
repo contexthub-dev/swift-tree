@@ -14,6 +14,7 @@ public struct FileTreeView<RightClickMenu: View, InlineEditor: View>: View {
   let onLeftClick: @MainActor (TreeItemInfo) -> Void
   let rightClickMenu: @MainActor (TreeItemInfo) -> RightClickMenu
   let inlineEditor: @MainActor (InlineEdit) -> InlineEditor
+  @State private var onScreen = OnScreenRows()
 
   public init(
     tree: FileTree,
@@ -40,27 +41,54 @@ public struct FileTreeView<RightClickMenu: View, InlineEditor: View>: View {
         description: Text(tree.root.path))
     } else {
       let metrics = RowMetrics(fontSize: tree.options.fontSize)
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 0) {
-          ForEach(tree.visibleRows()) { row in
-            switch row.kind {
-            case .node(let node):
-              FileTreeRow(node: node, depth: row.depth, metrics: metrics, view: self)
-            case .newEntry(let folder, let isDirectory):
-              RowLayout(depth: row.depth, metrics: metrics, tree: tree) {
-                Image(systemName: isDirectory ? "folder" : "doc")
-              } name: {
-                inlineEditor(.create(in: folder, isDirectory: isDirectory))
+      ScrollViewReader { proxy in
+        ScrollView {
+          LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(tree.visibleRows()) { row in
+              Group {
+                switch row.kind {
+                case .node(let node):
+                  FileTreeRow(node: node, depth: row.depth, metrics: metrics, view: self)
+                case .newEntry(let folder, let isDirectory):
+                  RowLayout(depth: row.depth, metrics: metrics, tree: tree) {
+                    Image(systemName: isDirectory ? "folder" : "doc")
+                  } name: {
+                    inlineEditor(.create(in: folder, isDirectory: isDirectory))
+                  }
+                }
               }
+              .onAppear { onScreen.ids.insert(row.id) }
+              .onDisappear { onScreen.ids.remove(row.id) }
             }
           }
+          .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
+        // Painted, so the chosen theme holds even when the host's appearance differs.
+        .background(.background)
+        // `initial`: a reveal made while no tree was on screen applies when it appears.
+        .onChange(of: tree.revealTarget, initial: true) { scrollToReveal(proxy) }
       }
-      // Painted, so the chosen theme holds even when the host's appearance differs.
-      .background(.background)
     }
   }
+
+  /// Centers the revealed row, unless it's already on screen or filtered out.
+  private func scrollToReveal(_ proxy: ScrollViewProxy) {
+    guard let target = tree.revealTarget else { return }
+    tree.revealTarget = nil
+    guard let row = tree.visibleRows().first(where: { $0.node?.url == target }),
+      !onScreen.ids.contains(row.id)
+    else { return }
+    // Next turn: the rows of folders `reveal` just opened aren't laid out yet.
+    DispatchQueue.main.async { proxy.scrollTo(row.id, anchor: .center) }
+  }
+}
+
+/// Ids of the rows the `LazyVStack` has on screen. A reference, so updating it
+/// as rows scroll by redraws nothing.
+/// ponytail: lazy rows appear slightly before they're visible, so a row just past
+/// the edge counts as on screen. macOS 15's `onScrollTargetVisibilityChange` is exact.
+private final class OnScreenRows {
+  var ids: Set<VisibleRow.ID> = []
 }
 
 extension FileTreeView where InlineEditor == EmptyView {
