@@ -40,6 +40,12 @@ Repo-specific facts. One per line, terse.
   (`.a:before,.b:before{…}`): v2.17.0 = 1,491 names. `less` and `toml` have no icon. Table entries
   were checked against the map; re-check when adding one.
 - `swift scripts/x.swift` (script mode) rejects bare `/regex/` literals; use `#/…/#`.
+- (0.5.0) `reveal(url)` expands ancestors, sets `selection`, and leaves `revealTarget` set. The view
+  consumes it in `.onChange(of:initial: true)`, so a reveal made while no view exists (e.g. a
+  collapsed sidebar) still applies when one appears. `scrollTo` runs on the next main-loop turn,
+  after the just-expanded rows exist.
+- The view's on-screen row set is a CLASS held in `@State` (`OnScreenRows`). As a `Set` in `@State`,
+  every row `onAppear`/`onDisappear` while scrolling would redraw the whole list.
 
 ## Testing seams
 - `FileTree(root:options:watcher:lister:git:onError:)` is the internal init: inject
