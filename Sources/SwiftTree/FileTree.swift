@@ -22,6 +22,9 @@ public final class FileTree {
   /// The row the host is naming, drawn with `FileTreeView`'s `inlineEditor`. The
   /// tree only draws it; the host sets it, commits, and clears it.
   public var inlineEdit: InlineEdit?
+  /// Set by `reveal`; `FileTreeView` scrolls to it if it's off screen, then clears
+  /// it. Kept while no view is on screen, so it applies when one appears.
+  var revealTarget: URL?
 
   private var expanded: Set<URL>
   /// Loaded folder contents, unfiltered. Filled lazily by `children(of:)`, which
@@ -123,6 +126,21 @@ public final class FileTree {
 
   public func setExpanded(_ url: URL, _ isExpanded: Bool) {
     if isExpanded { expanded.insert(url) } else { expanded.remove(url) }
+  }
+
+  /// Opens every folder between the root and `url`, selects `url`, and asks the
+  /// view to bring its row on screen. Other folders keep their state. A URL
+  /// outside the root only sets `selection`; nil clears it.
+  public func reveal(_ url: URL?) {
+    let local = url.flatMap(localized)
+    selection = local ?? url
+    guard let local, local != root else { return }
+    var folder = local.parent
+    while folder != root {
+      expanded.insert(folder)
+      folder = folder.parent
+    }
+    revealTarget = local
   }
 
   // MARK: Git status

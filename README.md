@@ -23,7 +23,7 @@ callbacks on the right.
 ## Install
 
 ```swift
-.package(url: "https://github.com/contexthub-dev/swift-tree.git", from: "0.4.0")
+.package(url: "https://github.com/contexthub-dev/swift-tree.git", from: "0.5.0")
 ```
 
 and add `"SwiftTree"` to your target's dependencies.
@@ -136,6 +136,7 @@ FileTree(root: URL,
 | `selection` | The highlighted row. A left click sets it; setting it yourself calls no handler and toggles nothing. |
 | `inlineEdit` | `.rename(url)` or `.create(in: folder, isDirectory:)`: draw the view's `inlineEditor` for that row (see [Naming rows inline](#naming-rows-inline)). `nil` closes it. |
 | `setExpanded(url, Bool)` | Open or close a folder. The root starts open. |
+| `reveal(url)` | Open every folder above `url`, select it, and scroll its row to the middle if it's off screen. Other folders keep their state. A hidden file opens its folders but scrolls nothing. Made while no view is on screen, it applies when one appears. |
 | `pause()` / `await resume()` | Stop and restart following file changes (see [Watching](#watching)). |
 
 ### `FSEventsWatcher`
