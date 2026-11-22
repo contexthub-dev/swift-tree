@@ -98,10 +98,22 @@ public final class FileTree {
 
   /// The folder's entries, read from disk on the first call only. A folder
   /// that is never asked for is never read. `.DS_Store` is never shown.
+  /// Under `sortOrder == .gitStatus`, changed entries come first. The partition runs
+  /// here, not in the cached listing, so reading `git` makes each status refresh re-sort.
   public func children(of url: URL) -> [TreeNode] {
     _ = listingVersion
     let all = (listings[url] ?? load(url)).filter { $0.name != ".DS_Store" }
-    return showHiddenFiles ? all : all.filter { !$0.name.hasPrefix(".") }
+    let shown = showHiddenFiles ? all : all.filter { !$0.name.hasPrefix(".") }
+    guard options.sortOrder == .gitStatus else { return shown }
+    // ponytail: status lookups per child per draw; cache the partition per git publish if big folders lag.
+    return shown.filter { isChanged($0.url) } + shown.filter { !isChanged($0.url) }
+  }
+
+  private func isChanged(_ url: URL) -> Bool {
+    switch status(of: url) {
+    case .modified, .staged, .untracked, .deleted: true
+    case .unmodified, .ignored, nil: false
+    }
   }
 
   public func isExpanded(_ url: URL) -> Bool { expanded.contains(url) }

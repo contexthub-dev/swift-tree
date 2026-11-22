@@ -29,5 +29,11 @@ public struct FileTreeOptions: Sendable {
   public var useDevIcons = true
   /// Override any status color: `options.colors.modified = .orange`.
   public var colors = StatusColors.zed
+  /// Order of each folder's children. Both keep folders before files and sort by name;
+  /// `gitStatus` first lists changed entries ahead of untouched ones.
+  public enum SortOrder: Sendable { case alphabetical, gitStatus }
+  /// `.gitStatus`: changed entries (modified, staged, untracked, deleted; folders by their
+  /// rolled-up status) before untouched ones, re-sorted on every status refresh.
+  public var sortOrder = SortOrder.alphabetical
   public init() {}
 }
