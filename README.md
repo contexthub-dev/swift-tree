@@ -98,6 +98,7 @@ let tree = FileTree(root: root, options: options)
 | `fontFamily` | `nil` | Font family of row names and branch labels; `nil` or a family that isn't installed uses the system font. Devicon glyphs keep their own font. |
 | `colors` | `StatusColors.zed` | Text color per git status (see below). |
 | `useDevIcons` | `true` | devicon glyphs on file rows. Unmapped files, folders and symlinks keep their SF Symbol. |
+| `sortOrder` | `.alphabetical` | Folders before files, by name. `.gitStatus` lists changed entries (modified, staged, untracked, deleted; folders by what's inside) before untouched ones, each group in that same order, and re-sorts on every status refresh. |
 
 ### `StatusColors`
 

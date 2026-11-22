@@ -46,6 +46,9 @@ Repo-specific facts. One per line, terse.
   after the just-expanded rows exist.
 - The view's on-screen row set is a CLASS held in `@State` (`OnScreenRows`). As a `Set` in `@State`,
   every row `onAppear`/`onDisappear` while scrolling would redraw the whole list.
+- (0.6.0) `sortOrder = .gitStatus` partitions in `children(of:)` at READ time, never in the cached
+  `listings`. Reading `status(of:)` there makes `git` an observed dependency, so each status publish
+  re-sorts with no cache invalidation. Sorting inside `load` would go stale on the next refresh.
 
 ## Testing seams
 - `FileTree(root:options:watcher:lister:git:onError:)` is the internal init: inject
